@@ -82,20 +82,20 @@ struct SetaRootView: View {
         .background(WindowTitleSetter(title: "Seta 🍄"))
     }
 
-    private var workspaceTopInset: CGFloat { SetaTheme.filterBarHeight + 10 }
-    private var workspaceBottomInset: CGFloat { SetaTheme.playerHeight + 10 }
+    private var workspaceTopInset: CGFloat { SetaTheme.filterBarHeight + 18 }
+    private var workspaceBottomInset: CGFloat { SetaTheme.playerHeight + 24 }
 
     @ViewBuilder
     private func sidePanelsLayer(in size: CGSize) -> some View {
         ZStack {
-            HStack(alignment: .center, spacing: 0) {
+            HStack(alignment: .top, spacing: 0) {
                 mixDockLayer
                     .frame(
                         maxHeight: store.mixDockExpanded ? size.height - workspaceTopInset - workspaceBottomInset : nil,
-                        alignment: store.mixDockExpanded ? .top : .center
+                        alignment: .top
                     )
                     .padding(.leading, 10)
-                    .padding(.top, store.mixDockExpanded ? workspaceTopInset : 0)
+                    .padding(.top, workspaceTopInset)
                     .padding(.bottom, store.mixDockExpanded ? workspaceBottomInset : 0)
 
                 Spacer(minLength: 0)
