@@ -64,8 +64,7 @@ struct TrackMapView: View {
                     .onEnded { value in
                         guard hypot(value.translation.width, value.translation.height) < 6 else { return }
                         guard scale <= 1.01, offset == .zero else { return }
-                        let mapped = inverseMapPoint(value.location, origin: origin)
-                        if let track = layout.nearestTrack(to: mapped, tracks: tracks) {
+                        if let track = layout.nearestTrack(to: value.location, tracks: tracks) {
                             selectedTrackID = track.id
                             onPlayTrack?(track.id)
                         } else {
@@ -81,8 +80,7 @@ struct TrackMapView: View {
                         hoverLocation = nil
                         return
                     }
-                    let mapped = inverseMapPoint(location, origin: origin)
-                    if let nearest = layout.nearestTrack(to: mapped, tracks: tracks) {
+                    if let nearest = layout.nearestTrack(to: location, tracks: tracks) {
                         hoveredTrackID = nearest.id
                         hoverLocation = location
                     } else {
@@ -123,16 +121,6 @@ struct TrackMapView: View {
         lastScale = 1
         offset = .zero
         panBase = .zero
-    }
-
-    private func inverseMapPoint(_ location: CGPoint, origin: CGPoint) -> CGPoint {
-        let center = CGPoint(x: origin.x, y: origin.y)
-        let translated = CGPoint(x: location.x - offset.width, y: location.y - offset.height)
-        let unscaled = CGPoint(
-            x: center.x + (translated.x - center.x) / scale,
-            y: center.y + (translated.y - center.y) / scale
-        )
-        return CGPoint(x: unscaled.x - origin.x, y: unscaled.y - origin.y)
     }
 
     @ViewBuilder
