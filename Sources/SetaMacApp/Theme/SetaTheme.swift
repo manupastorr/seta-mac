@@ -16,6 +16,9 @@ enum SetaTheme {
     static let mixDockWidth: CGFloat = 268
     static let legendWidth: CGFloat = 172
     static let uiRightInset: CGFloat = 214
+    static let brandColumnWidth: CGFloat = 116
+    static let searchFieldWidth: CGFloat = 280
+    static let searchPopoverLeft: CGFloat = 10 + brandColumnWidth + 12
 
     static let bodyFont = Font.system(size: 14, weight: .regular, design: .default)
 }

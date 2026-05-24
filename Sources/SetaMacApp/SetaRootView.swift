@@ -46,6 +46,7 @@ struct SetaRootView: View {
                 }
 
                 sidePanelsLayer(in: proxy.size)
+                searchResultsLayer
 
                 if store.highlightNeighbors {
                     NeighborModeCue()
@@ -84,6 +85,18 @@ struct SetaRootView: View {
 
     private var workspaceTopInset: CGFloat { SetaTheme.filterBarHeight + 18 }
     private var workspaceBottomInset: CGFloat { SetaTheme.playerHeight + 24 }
+
+    @ViewBuilder
+    private var searchResultsLayer: some View {
+        if !store.filter.query.trimmingCharacters(in: .whitespaces).isEmpty {
+            SearchResultsPopover(store: store)
+                .frame(width: SetaTheme.searchFieldWidth + 28, alignment: .topLeading)
+                .padding(.leading, SetaTheme.searchPopoverLeft)
+                .padding(.top, SetaTheme.filterBarHeight + 4)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .zIndex(40)
+        }
+    }
 
     @ViewBuilder
     private func sidePanelsLayer(in size: CGSize) -> some View {

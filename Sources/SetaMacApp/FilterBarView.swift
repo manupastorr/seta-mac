@@ -18,7 +18,7 @@ struct FilterBarView: View {
                         .font(.system(size: 10))
                         .foregroundStyle(SetaTheme.muted)
                 }
-                .frame(width: 116, alignment: .leading)
+                .frame(width: SetaTheme.brandColumnWidth, alignment: .leading)
 
                 HStack(alignment: .center, spacing: 8) {
                     searchField
@@ -49,48 +49,39 @@ struct FilterBarView: View {
     }
 
     private var searchField: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            TextField("Artist or title…", text: $store.filter.query)
-                .textFieldStyle(.plain)
-                .font(.system(size: 13))
-                .foregroundStyle(SetaTheme.text)
-                .tint(SetaTheme.accent)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
-                .background(SetaTheme.panel)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(SetaTheme.panelBorder)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .frame(minWidth: 210, maxWidth: 280)
-                .focused($searchFocused)
-                .onChange(of: store.filter.query) { _, _ in
-                    store.resetSearchResultsIndex()
-                }
-                .onKeyPress(.upArrow) {
-                    guard !store.filter.query.trimmingCharacters(in: .whitespaces).isEmpty else { return .ignored }
-                    store.moveSearchResultsHighlight(delta: -1)
-                    return .handled
-                }
-                .onKeyPress(.downArrow) {
-                    guard !store.filter.query.trimmingCharacters(in: .whitespaces).isEmpty else { return .ignored }
-                    store.moveSearchResultsHighlight(delta: 1)
-                    return .handled
-                }
-                .onKeyPress(.return) {
-                    guard !store.filter.query.trimmingCharacters(in: .whitespaces).isEmpty else { return .ignored }
-                    store.activateSearchResult()
-                    return .handled
-                }
-
-            if !store.filter.query.trimmingCharacters(in: .whitespaces).isEmpty {
-                SearchResultsPopover(store: store)
-                    .padding(.top, 4)
-                    .zIndex(30)
+        TextField("Artist or title…", text: $store.filter.query)
+            .textFieldStyle(.plain)
+            .font(.system(size: 13))
+            .foregroundStyle(SetaTheme.text)
+            .tint(SetaTheme.accent)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(SetaTheme.panel)
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(SetaTheme.panelBorder)
             }
-        }
-        .zIndex(store.filter.query.isEmpty ? 0 : 30)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .frame(width: SetaTheme.searchFieldWidth)
+            .focused($searchFocused)
+            .onChange(of: store.filter.query) { _, _ in
+                store.resetSearchResultsIndex()
+            }
+            .onKeyPress(.upArrow) {
+                guard !store.filter.query.trimmingCharacters(in: .whitespaces).isEmpty else { return .ignored }
+                store.moveSearchResultsHighlight(delta: -1)
+                return .handled
+            }
+            .onKeyPress(.downArrow) {
+                guard !store.filter.query.trimmingCharacters(in: .whitespaces).isEmpty else { return .ignored }
+                store.moveSearchResultsHighlight(delta: 1)
+                return .handled
+            }
+            .onKeyPress(.return) {
+                guard !store.filter.query.trimmingCharacters(in: .whitespaces).isEmpty else { return .ignored }
+                store.activateSearchResult()
+                return .handled
+            }
     }
 
     private var sourceChips: some View {
