@@ -23,7 +23,7 @@ struct BpmRangeControl: View {
                 maxValue = domain.upperBound
             }
 
-            VStack(spacing: -8) {
+            VStack(spacing: -4) {
                 GeometryReader { proxy in
                     let width = proxy.size.width
                     ZStack(alignment: .leading) {
@@ -67,10 +67,10 @@ struct BpmRangeControl: View {
                         maxValue = max(clamped($0), minValue)
                     }
                 }
-                .padding(.horizontal, 8)
+                .padding(.horizontal, -4)
                 .frame(width: width, height: 14)
             }
-            .frame(height: 28, alignment: .center)
+            .frame(height: 32, alignment: .center)
         }
     }
 
@@ -111,7 +111,7 @@ struct BpmRangeControl: View {
                 Text("\(Int(value.rounded()))")
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(SetaTheme.muted)
-                    .frame(width: 24, height: 14, alignment: alignTrailing ? .trailing : .leading)
+                    .frame(width: 24, height: 14, alignment: .center)
                     .contentShape(Rectangle())
                     .onTapGesture {
                         draft.wrappedValue = "\(Int(value.rounded()))"
