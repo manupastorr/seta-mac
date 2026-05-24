@@ -245,19 +245,14 @@ struct TrackMapView: View {
             let ellipse = layout.momentEllipse(moment)
             let active = activeMomentIDs.isEmpty || activeMomentIDs.contains(moment.id)
             let belowView = layout.momentBelowDisplayView(moment)
-            var fillOpacity = filtering ? (active ? 0.12 : 0.02) : 0.045
+            var fillOpacity = filtering ? (active ? 0.18 : 0.035) : 0.09
             if belowView { fillOpacity *= 0.45 }
 
             let rect = CGRect(x: ellipse.cx - ellipse.rx, y: ellipse.cy - ellipse.ry, width: ellipse.rx * 2, height: ellipse.ry * 2)
-            for blurPass in 0 ..< 4 {
-                let expansion = CGFloat(blurPass + 1) * 3
-                let blurRect = rect.insetBy(dx: -expansion, dy: -expansion)
-                context.fill(
-                    Path(ellipseIn: blurRect),
-                    with: .color(Color(hex: moment.colorHex).opacity(fillOpacity * 0.18))
-                )
+            context.drawLayer { layer in
+                layer.addFilter(.blur(radius: 12))
+                layer.fill(Path(ellipseIn: rect), with: .color(Color(hex: moment.colorHex).opacity(fillOpacity)))
             }
-            context.fill(Path(ellipseIn: rect), with: .color(Color(hex: moment.colorHex).opacity(fillOpacity)))
 
             if belowView { continue }
             let labelY = ellipse.cy - ellipse.ry - 5
