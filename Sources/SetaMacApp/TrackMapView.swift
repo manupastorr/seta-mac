@@ -190,18 +190,13 @@ struct TrackMapView: View {
         let estimatedTooltipHeight: CGFloat = 172
         let loupeRadius: CGFloat = 70
         let gap: CGFloat = 10
-        let margin: CGFloat = 10
-        let rightLeft = center.x + loupeRadius + gap
-        let leftLeft = center.x - loupeRadius - gap - tooltipWidth
-        let left = rightLeft + tooltipWidth <= canvasSize.width - margin ? rightLeft : max(margin, leftLeft)
-        let top = min(
-            max(margin, center.y - loupeRadius / 2),
-            max(margin, canvasSize.height - estimatedTooltipHeight - margin)
-        )
+        let left = center.x + loupeRadius + gap
+        let top = center.y - loupeRadius / 2
 
         TrackTooltipView(track: track)
             .position(x: left + tooltipWidth / 2, y: top + estimatedTooltipHeight / 2)
             .allowsHitTesting(false)
+            .zIndex(6)
     }
 
     @ViewBuilder
@@ -217,6 +212,7 @@ struct TrackMapView: View {
         )
         .position(x: center.x, y: center.y)
         .allowsHitTesting(false)
+        .zIndex(5)
     }
 
     private func clampedLoupeCenter(_ point: CGPoint, canvasSize: CGSize) -> CGPoint {
