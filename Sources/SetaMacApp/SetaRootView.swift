@@ -49,8 +49,8 @@ struct SetaRootView: View {
 
                 if store.highlightNeighbors {
                     NeighborModeCue()
-                        .padding(.top, SetaTheme.filterBarHeight + 10)
-                        .frame(maxWidth: .infinity, alignment: .top)
+                        .padding(.top, workspaceTopInset)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 }
 
                 StatusBanner(store: store)
