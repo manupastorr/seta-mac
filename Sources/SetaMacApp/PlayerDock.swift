@@ -3,6 +3,12 @@ import SetaMacCore
 
 struct PlayerDock: View {
     @ObservedObject var store: LibraryStore
+    @ObservedObject private var player: AudioPlayerController
+
+    init(store: LibraryStore) {
+        self.store = store
+        self.player = store.player
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -13,7 +19,7 @@ struct PlayerDock: View {
                 HStack(spacing: 6) {
                     transportButton("◀") { store.playRelative(step: -1) }
                         .disabled(store.playQueue.count <= 1)
-                    transportButton(store.player.isPlaying ? "❚❚" : "▶", main: true) {
+                    transportButton(player.isPlaying ? "❚❚" : "▶", main: true) {
                         store.togglePlayPause()
                     }
                     transportButton("▶|") { store.playRelative(step: 1) }
@@ -40,15 +46,15 @@ struct PlayerDock: View {
 
                 VStack(spacing: 4) {
                     WaveformView(
-                        track: store.player.currentTrack,
-                        progress: store.player.progress,
+                        track: player.currentTrack,
+                        progress: player.progress,
                         onSeek: { store.seekToProgress($0) }
                     )
                     .frame(height: 40)
                     HStack {
-                        Text(formatPlaybackTime(store.player.currentTime))
+                        Text(formatPlaybackTime(player.currentTime))
                         Spacer()
-                        Text(formatPlaybackTime(store.player.duration))
+                        Text(formatPlaybackTime(player.duration))
                         Spacer()
                         HStack(spacing: 4) {
                             SetaKbd(text: "?")
@@ -77,7 +83,7 @@ struct PlayerDock: View {
     }
 
     private var currentTrack: SetaTrack? {
-        store.player.currentTrack
+        player.currentTrack
     }
 
     private var displayTitle: String {
