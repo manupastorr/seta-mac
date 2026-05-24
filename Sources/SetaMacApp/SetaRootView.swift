@@ -87,7 +87,7 @@ struct SetaRootView: View {
 
     @ViewBuilder
     private func sidePanelsLayer(in size: CGSize) -> some View {
-        ZStack {
+        ZStack(alignment: .topLeading) {
             HStack(alignment: .top, spacing: 0) {
                 mixDockLayer
                     .frame(
@@ -100,19 +100,19 @@ struct SetaRootView: View {
 
                 Spacer(minLength: 0)
             }
-            .frame(width: size.width, height: size.height)
+            .frame(width: size.width, height: size.height, alignment: .topLeading)
 
             legendsLayer
-                .frame(width: size.width, height: size.height, alignment: .topTrailing)
                 .padding(.trailing, 18)
                 .padding(.top, workspaceTopInset)
+                .frame(width: size.width, height: size.height, alignment: .topTrailing)
 
             legendsBottomLayer
-                .frame(width: size.width, height: size.height, alignment: .bottomTrailing)
                 .padding(.trailing, 18)
                 .padding(.bottom, workspaceBottomInset)
+                .frame(width: size.width, height: size.height, alignment: .bottomTrailing)
         }
-        .frame(width: size.width, height: size.height)
+        .frame(width: size.width, height: size.height, alignment: .topLeading)
     }
 
     @ViewBuilder
