@@ -25,6 +25,7 @@ struct TrackMapView: View {
     @State private var lastScale: CGFloat = 1
     @State private var offset: CGSize = .zero
     @State private var panBase: CGSize = .zero
+    @State private var hoverLocation: CGPoint?
 
     var body: some View {
         GeometryReader { proxy in
@@ -45,8 +46,13 @@ struct TrackMapView: View {
 
                 if let hoveredID = hoveredTrackID,
                    let hovered = tracks.first(where: { $0.id == hoveredID }) {
-                    tooltipOverlay(for: hovered, layout: layout, origin: origin, canvasSize: proxy.size)
-                    loupeOverlay(for: hovered, layout: layout, origin: origin, canvasSize: proxy.size)
+                    let anchor = hoverLocation ?? transformedScreenPoint(
+                        local: layout.trackPoint(for: hovered, jitter: true),
+                        origin: origin,
+                        canvasSize: proxy.size
+                    )
+                    loupeOverlay(for: hovered, layout: layout, anchor: anchor, canvasSize: proxy.size)
+                    tooltipOverlay(for: hovered, anchor: anchor, canvasSize: proxy.size)
                 }
             }
             .background(SetaTheme.background)
@@ -72,12 +78,20 @@ struct TrackMapView: View {
                 case .active(let location):
                     guard scale <= 1.01, offset == .zero else {
                         hoveredTrackID = nil
+                        hoverLocation = nil
                         return
                     }
                     let mapped = inverseMapPoint(location, origin: origin)
-                    hoveredTrackID = layout.nearestTrack(to: mapped, tracks: tracks)?.id
+                    if let nearest = layout.nearestTrack(to: mapped, tracks: tracks) {
+                        hoveredTrackID = nearest.id
+                        hoverLocation = location
+                    } else {
+                        hoveredTrackID = nil
+                        hoverLocation = nil
+                    }
                 case .ended:
                     hoveredTrackID = nil
+                    hoverLocation = nil
                 }
             }
         }
@@ -170,29 +184,29 @@ struct TrackMapView: View {
     }
 
     @ViewBuilder
-    private func tooltipOverlay(for track: SetaTrack, layout: MapPlotLayout, origin: CGPoint, canvasSize: CGSize) -> some View {
-        let point = layout.trackPoint(for: track, jitter: true)
-        let screen = CGPoint(x: origin.x + point.x + 16, y: origin.y + point.y - 12)
+    private func tooltipOverlay(for track: SetaTrack, anchor: CGPoint, canvasSize: CGSize) -> some View {
+        let center = clampedLoupeCenter(anchor, canvasSize: canvasSize)
+        let tooltipWidth: CGFloat = 236
+        let estimatedTooltipHeight: CGFloat = 172
+        let loupeRadius: CGFloat = 70
+        let gap: CGFloat = 10
+        let margin: CGFloat = 10
+        let rightLeft = center.x + loupeRadius + gap
+        let leftLeft = center.x - loupeRadius - gap - tooltipWidth
+        let left = rightLeft + tooltipWidth <= canvasSize.width - margin ? rightLeft : max(margin, leftLeft)
+        let top = min(
+            max(margin, center.y - loupeRadius / 2),
+            max(margin, canvasSize.height - estimatedTooltipHeight - margin)
+        )
+
         TrackTooltipView(track: track)
-            .position(
-                x: min(max(130, screen.x), canvasSize.width - 130),
-                y: min(max(80, screen.y), canvasSize.height - 120)
-            )
+            .position(x: left + tooltipWidth / 2, y: top + estimatedTooltipHeight / 2)
             .allowsHitTesting(false)
     }
 
     @ViewBuilder
-    private func loupeOverlay(for track: SetaTrack, layout: MapPlotLayout, origin: CGPoint, canvasSize: CGSize) -> some View {
-        let local = layout.trackPoint(for: track, jitter: true)
-        let point = transformedScreenPoint(
-            local: local,
-            origin: origin,
-            canvasSize: canvasSize
-        )
-        let radius: CGFloat = 70
-        let margin: CGFloat = 10
-        let x = min(max(point.x, radius + margin), canvasSize.width - radius - margin)
-        let y = min(max(point.y, radius + margin), canvasSize.height - radius - margin)
+    private func loupeOverlay(for track: SetaTrack, layout: MapPlotLayout, anchor: CGPoint, canvasSize: CGSize) -> some View {
+        let center = clampedLoupeCenter(anchor, canvasSize: canvasSize)
 
         MapLoupeView(
             track: track,
@@ -201,8 +215,17 @@ struct TrackMapView: View {
             neighborIDs: neighborHighlightIDs,
             playingID: playingTrackID
         )
-        .position(x: x, y: y)
+        .position(x: center.x, y: center.y)
         .allowsHitTesting(false)
+    }
+
+    private func clampedLoupeCenter(_ point: CGPoint, canvasSize: CGSize) -> CGPoint {
+        let radius: CGFloat = 70
+        let margin: CGFloat = 10
+        return CGPoint(
+            x: min(max(point.x, radius + margin), canvasSize.width - radius - margin),
+            y: min(max(point.y, radius + margin), canvasSize.height - radius - margin)
+        )
     }
 
     private func transformedScreenPoint(local: CGPoint, origin: CGPoint, canvasSize: CGSize) -> CGPoint {
