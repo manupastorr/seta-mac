@@ -23,7 +23,7 @@ struct BpmRangeControl: View {
                 maxValue = domain.upperBound
             }
 
-            VStack(spacing: 2) {
+            VStack(spacing: 0) {
                 GeometryReader { proxy in
                     let width = proxy.size.width
                     ZStack(alignment: .leading) {
@@ -56,7 +56,7 @@ struct BpmRangeControl: View {
                             }
                     )
                 }
-                .frame(width: width, height: 28)
+                .frame(width: width, height: 24)
 
                 HStack {
                     bpmEndSlot(value: minValue, alignTrailing: false, editing: $editingMin, draft: $minDraft) {
@@ -68,7 +68,9 @@ struct BpmRangeControl: View {
                     }
                 }
                 .padding(.horizontal, 8)
+                .frame(height: 14)
             }
+            .frame(height: 38, alignment: .center)
         }
     }
 
@@ -96,6 +98,7 @@ struct BpmRangeControl: View {
                 TextField("", text: draft)
                     .textFieldStyle(.plain)
                     .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(SetaTheme.text)
                     .multilineTextAlignment(alignTrailing ? .trailing : .leading)
                     .frame(width: 24, height: 14)
                     .onSubmit {
@@ -105,16 +108,15 @@ struct BpmRangeControl: View {
                         editing.wrappedValue = false
                     }
             } else {
-                Button {
-                    draft.wrappedValue = "\(Int(value.rounded()))"
-                    editing.wrappedValue = true
-                } label: {
-                    Text("\(Int(value.rounded()))")
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundStyle(SetaTheme.muted)
-                        .frame(width: 24, height: 14, alignment: alignTrailing ? .trailing : .leading)
-                }
-                .buttonStyle(.plain)
+                Text("\(Int(value.rounded()))")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(SetaTheme.muted)
+                    .frame(width: 24, height: 14, alignment: alignTrailing ? .trailing : .leading)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        draft.wrappedValue = "\(Int(value.rounded()))"
+                        editing.wrappedValue = true
+                    }
             }
         }
     }
