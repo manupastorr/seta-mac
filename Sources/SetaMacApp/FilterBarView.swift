@@ -53,6 +53,8 @@ struct FilterBarView: View {
             TextField("Artist or title…", text: $store.filter.query)
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
+                .foregroundStyle(SetaTheme.text)
+                .tint(SetaTheme.accent)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 7)
                 .background(SetaTheme.panel)

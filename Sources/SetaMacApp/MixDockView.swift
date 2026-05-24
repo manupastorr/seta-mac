@@ -147,6 +147,8 @@ struct DraftPane: View {
                 TextField("Set draft name", text: $store.draft.name)
                     .textFieldStyle(.plain)
                     .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(SetaTheme.text)
+                    .tint(SetaTheme.accent)
                     .onSubmit { store.persistDraftSoonViaView() }
                 Text(draftCountLabel)
                     .font(.system(size: 10))
@@ -369,6 +371,8 @@ struct DraftTrackRow: View {
             TextField("Note…", text: $noteText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 10))
+                .foregroundStyle(SetaTheme.text)
+                .tint(SetaTheme.accent)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 4)
                 .background(Color.white.opacity(0.9))

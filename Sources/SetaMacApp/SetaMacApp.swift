@@ -8,6 +8,7 @@ struct SetaMacApp: App {
         WindowGroup {
             SetaRootView()
                 .environmentObject(store)
+                .preferredColorScheme(.light)
                 .frame(minWidth: 1180, minHeight: 760)
         }
         .commands {
