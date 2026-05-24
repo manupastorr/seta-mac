@@ -23,7 +23,7 @@ struct BpmRangeControl: View {
                 maxValue = domain.upperBound
             }
 
-            VStack(spacing: 0) {
+            VStack(spacing: -8) {
                 GeometryReader { proxy in
                     let width = proxy.size.width
                     ZStack(alignment: .leading) {
@@ -56,7 +56,7 @@ struct BpmRangeControl: View {
                             }
                     )
                 }
-                .frame(width: width, height: 24)
+                .frame(width: width, height: 22)
 
                 HStack {
                     bpmEndSlot(value: minValue, alignTrailing: false, editing: $editingMin, draft: $minDraft) {
@@ -70,7 +70,7 @@ struct BpmRangeControl: View {
                 .padding(.horizontal, 8)
                 .frame(height: 14)
             }
-            .frame(height: 38, alignment: .center)
+            .frame(height: 28, alignment: .center)
         }
     }
 
