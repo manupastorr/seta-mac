@@ -39,6 +39,7 @@ final class LibraryStore: ObservableObject {
     private var playQueueSig = ""
     private var persistWorkItem: DispatchWorkItem?
     private var suppressPlaybackUntil = Date.distantPast
+    private let maxMapGraphEdges = 1800
 
     init() {
         restoreDraft()
@@ -104,10 +105,14 @@ final class LibraryStore: ObservableObject {
     var mapGraphEdges: [(SetaTrack, SetaTrack, Double)] {
         guard settings.showExploreLinks, let library else { return [] }
         let ids = Set(filteredTracks.map(\.id))
-        return library.visibleEdges(trackIDs: ids).compactMap { edge in
-            guard let source = tracksByID[edge.source], let target = tracksByID[edge.target] else { return nil }
-            return (source, target, edge.score)
-        }
+        let byID = tracksByID
+        return library.visibleEdges(trackIDs: ids)
+            .sorted { $0.score > $1.score }
+            .prefix(maxMapGraphEdges)
+            .compactMap { edge in
+                guard let source = byID[edge.source], let target = byID[edge.target] else { return nil }
+                return (source, target, edge.score)
+            }
     }
 
     var mixLinks: [(SetaTrack, SetaTrack)] {
