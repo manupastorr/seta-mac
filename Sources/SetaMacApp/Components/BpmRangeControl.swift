@@ -68,7 +68,7 @@ struct BpmRangeControl: View {
                     }
                 }
                 .padding(.horizontal, 8)
-                .frame(height: 14)
+                .frame(width: width, height: 14)
             }
             .frame(height: 28, alignment: .center)
         }
