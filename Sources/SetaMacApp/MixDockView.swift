@@ -66,6 +66,9 @@ struct MixDockView: View {
                 }
                 .padding(.bottom, 8)
 
+                ManualEnergyControl(store: store)
+                    .padding(.bottom, 8)
+
                 if store.mixDockTab == .neighbors {
                     NeighborsPane(store: store)
                 } else {
@@ -76,6 +79,49 @@ struct MixDockView: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .onChange(of: store.mixDockTab) { _, _ in
             store.initQueueFocusFromPlayback()
+        }
+    }
+}
+
+struct ManualEnergyControl: View {
+    @ObservedObject var store: LibraryStore
+
+    var body: some View {
+        if let track = store.selectedTrack {
+            VStack(alignment: .leading, spacing: 5) {
+                HStack {
+                    Text("Intensity")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(SetaTheme.muted)
+                    Spacer()
+                    Text(String(format: "%.2f", track.effectiveEnergy))
+                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(SetaTheme.text)
+                    Button("Auto") {
+                        store.clearManualEnergy(for: track.id)
+                    }
+                    .font(.system(size: 9, weight: .semibold))
+                    .buttonStyle(.plain)
+                    .foregroundStyle(track.energyManual == nil ? SetaTheme.muted.opacity(0.55) : SetaTheme.accent)
+                    .disabled(track.energyManual == nil)
+                }
+                Slider(
+                    value: Binding(
+                        get: { store.selectedTrack?.effectiveEnergy ?? track.effectiveEnergy },
+                        set: { store.setManualEnergy($0, for: track.id) }
+                    ),
+                    in: 0 ... 1,
+                    step: 0.01
+                )
+                .controlSize(.small)
+            }
+            .padding(8)
+            .background(Color.white.opacity(0.55))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(SetaTheme.panelBorder.opacity(0.8))
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
     }
 }

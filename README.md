@@ -38,6 +38,7 @@ On first launch the app auto-loads the newest available `library.json` from:
 - Neighbor queue + play queue navigation
 - Drafts: multiple drafts, notes, drag reorder, final marks, persistence, export
 - Player dock with waveform seek, time display, keyboard shortcuts
+- Effective energy parity with the web app, including local manual intensity overrides
 - Rescan library via the existing Python scanner (`scan_library.py`)
 - Unsigned `.app` packaging plus optional sign/notarize scripts
 - Manual native E2E checklist
@@ -56,11 +57,13 @@ Expected launch state:
 - The app auto-loads `library.json` when available.
 - The map renders immediately.
 - The player dock starts idle with `Nothing playing`; playback should start only after selecting/playing a track.
+- Selecting a track and opening the mix dock shows an Intensity slider; the override persists locally and can be cleared with `Auto`.
 
 ## Intentionally Still Python
 
 - Audio analysis (`analyze.py`) stays in the Python scanner until golden parity tests exist.
 - Use **Library → Rescan Library** in the app or `./start.sh --quick` in `../seta`.
+- Manual energy overrides are local `UserDefaults` state (`seta-energy-overrides-v1`), not edits to `library.json`.
 
 ## Local Swift Toolchain Note
 

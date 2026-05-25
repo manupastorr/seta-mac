@@ -52,12 +52,13 @@ public enum TrackPresentation {
             )
         )
 
-        let energy = track.energy ?? 0.5
+        let energy = track.effectiveEnergy
+        let sourceSuffix = track.energyManual == nil ? "" : " M"
         items.append(
             Badge(
                 kind: .energy,
-                text: "Int \(String(format: "%.2f", energy))",
-                title: "Estimated intensity (0–1, map Y uses library range)"
+                text: "Int \(String(format: "%.2f", energy))\(sourceSuffix)",
+                title: "\(track.energyManual == nil ? "Estimated" : "Manual") intensity (0–1, map Y uses library range)"
             )
         )
 

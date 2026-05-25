@@ -52,7 +52,7 @@ public enum SetMoments {
 
     public static func matches(_ track: SetaTrack, moment: SetMoment) -> Bool {
         guard let bpm = track.bpm else { return false }
-        let energy = track.energy ?? 0.5
+        let energy = track.effectiveEnergy
         return moment.bpmRange.contains(bpm) && moment.energyRange.contains(energy)
     }
 

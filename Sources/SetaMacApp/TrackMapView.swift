@@ -255,7 +255,7 @@ struct TrackMapView: View {
             }
 
             if belowView { continue }
-            let labelY = ellipse.cy - ellipse.ry - 5
+            let labelY = ellipse.cy
             guard labelY >= 12, labelY <= tickBandTop, ellipse.cx >= 28, ellipse.cx <= layout.plotWidth - 28 else { continue }
             let labelOpacity = filtering && !active ? 0.28 : (belowView ? 0.72 : 1)
             context.draw(

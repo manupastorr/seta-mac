@@ -89,8 +89,8 @@ public struct SetaDraft: Codable, Equatable {
             return ordered
         case .energy:
             return ordered.sorted {
-                if ($0.energy ?? 0) != ($1.energy ?? 0) {
-                    return ($0.energy ?? 0) < ($1.energy ?? 0)
+                if $0.effectiveEnergy != $1.effectiveEnergy {
+                    return $0.effectiveEnergy < $1.effectiveEnergy
                 }
                 return ($0.bpm ?? 0) < ($1.bpm ?? 0)
             }
@@ -99,7 +99,7 @@ public struct SetaDraft: Codable, Equatable {
                 if ($0.bpm ?? .infinity) != ($1.bpm ?? .infinity) {
                     return ($0.bpm ?? .infinity) < ($1.bpm ?? .infinity)
                 }
-                return ($0.energy ?? 0) < ($1.energy ?? 0)
+                return $0.effectiveEnergy < $1.effectiveEnergy
             }
         }
     }
@@ -118,7 +118,7 @@ public struct SetaDraft: Codable, Equatable {
             let meta = [
                 track.bpm.map { "\(Int(round($0))) BPM" },
                 track.key,
-                track.energy.map { String(format: "E %.2f", $0) }
+                String(format: "E %.2f", track.effectiveEnergy)
             ].compactMap { $0 }.joined(separator: " · ")
             let star = finalIds.contains(track.id) ? "* " : ""
             let note = notes[track.id].map { " - \($0)" } ?? ""
@@ -130,4 +130,3 @@ public struct SetaDraft: Codable, Equatable {
         updatedAt = Date().timeIntervalSince1970
     }
 }
-

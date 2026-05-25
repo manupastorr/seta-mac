@@ -21,6 +21,8 @@ cd ../seta-mac
 - [ ] Toolbar open/rescan works.
 - [ ] Search, source, genre, BPM, Camelot, draft-only, and set-zone filters work.
 - [ ] Map selection, neighbor highlighting, and explore-link overlay work.
+- [ ] Selecting a track shows the mix-dock Intensity slider; changing it moves/sorts the track by the manual value.
+- [ ] Clicking `Auto` clears the manual intensity override and returns to scanner energy.
 - [ ] Player dock plays local audio, seeks via waveform, and shows elapsed/total time.
 - [ ] Top filter bar does not wrap chip labels or clip Reset/open/rescan controls at the default window width.
 - [ ] Set-zone overlays are visible but do not overpower track dots.

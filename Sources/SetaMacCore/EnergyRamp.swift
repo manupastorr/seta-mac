@@ -38,7 +38,7 @@ public enum EnergyRamp {
             return EnergyRampGeometry(path: "", points: [], minEnergy: 0, maxEnergy: 0)
         }
 
-        let energies = tracks.map { $0.energy ?? 0 }
+        let energies = tracks.map(\.effectiveEnergy)
         let minEnergy = energies.min() ?? 0
         let maxEnergy = energies.max() ?? 0
         let span = Swift.max(maxEnergy - minEnergy, 0.08)
@@ -52,7 +52,7 @@ public enum EnergyRamp {
             } else {
                 x = pad + (CGFloat(index) / CGFloat(tracks.count - 1)) * innerW
             }
-            let energy = track.energy ?? 0
+            let energy = track.effectiveEnergy
             let y = pad + innerH - CGFloat((energy - minEnergy) / span) * innerH
             return EnergyRampPoint(x: x, y: y, trackID: track.id)
         }

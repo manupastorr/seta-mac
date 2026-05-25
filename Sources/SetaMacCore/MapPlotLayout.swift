@@ -55,7 +55,7 @@ public struct MapPlotLayout: Equatable, Sendable {
     }
 
     public static func computeEnergyDisplayDomain(tracks: [SetaTrack]) -> ClosedRange<Double> {
-        let energies = tracks.compactMap(\.energy).filter(\.isFinite)
+        let energies = tracks.map(\.effectiveEnergy).filter(\.isFinite)
         guard energies.count >= 2 else { return EnergyDisplay.fallback }
 
         let sorted = energies.sorted()
@@ -123,7 +123,7 @@ public struct MapPlotLayout: Equatable, Sendable {
             let mid = (MapPlotMetrics.bpmDomain.lowerBound + MapPlotMetrics.bpmDomain.upperBound) / 2
             cx = bpmX(mid)
         }
-        let cy = energyY(track.energy ?? 0.5)
+        let cy = energyY(track.effectiveEnergy)
         var px = cx
         var py = cy
         if jitter {

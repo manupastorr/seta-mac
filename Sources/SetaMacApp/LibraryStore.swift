@@ -33,6 +33,7 @@ final class LibraryStore: ObservableObject {
     @Published var momentsLegendOpen = false
     @Published var queueFocusIndex = -1
     @Published var searchResultsIndex = -1
+    @Published var energyOverrides: [String: Double] = [:]
 
     let player = AudioPlayerController()
 
@@ -40,9 +41,11 @@ final class LibraryStore: ObservableObject {
     private var persistWorkItem: DispatchWorkItem?
     private var suppressPlaybackUntil = Date.distantPast
     private let maxMapGraphEdges = 1800
+    private let energyOverridesKey = "seta-energy-overrides-v1"
 
     init() {
         restoreDraft()
+        restoreEnergyOverrides()
         player.onFinished = { [weak self] in
             self?.playRelative(step: 1)
         }
@@ -220,7 +223,7 @@ final class LibraryStore: ObservableObject {
     func load(url: URL, remember: Bool = true) {
         do {
             let data = try Data(contentsOf: url)
-            let decoded = try SetaLibrary.decode(from: data)
+            let decoded = applyingEnergyOverrides(to: try SetaLibrary.decode(from: data))
             let decodedIssues = decoded.validationIssues()
             errorMessage = nil
             if remember {
@@ -245,6 +248,37 @@ final class LibraryStore: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func restoreEnergyOverrides() {
+        guard let raw = UserDefaults.standard.dictionary(forKey: energyOverridesKey) as? [String: Double] else {
+            energyOverrides = [:]
+            return
+        }
+        energyOverrides = raw.filter { $0.value.isFinite }.mapValues { min(1, max(0, $0)) }
+    }
+
+    private func persistEnergyOverrides() {
+        UserDefaults.standard.set(energyOverrides, forKey: energyOverridesKey)
+    }
+
+    private func applyingEnergyOverrides(to library: SetaLibrary) -> SetaLibrary {
+        let tracks = library.tracks.map { track in
+            track.applyingManualEnergy(energyOverrides[track.id])
+        }
+        return SetaLibrary(
+            generatedAt: library.generatedAt,
+            tracksRoot: library.tracksRoot,
+            curateRoot: library.curateRoot,
+            trackCount: library.trackCount,
+            tracks: tracks,
+            edges: library.edges
+        )
+    }
+
+    private func applyEnergyOverridesToCurrentLibrary() {
+        guard let library else { return }
+        self.library = applyingEnergyOverrides(to: library)
     }
 
     func rescanLibrary(fullEdges: Bool = false) {
@@ -449,6 +483,20 @@ final class LibraryStore: ObservableObject {
     func sortDraftByBPM() {
         draft.sortMode = .bpm
         persistDraftSoon()
+        syncPlayQueue()
+    }
+
+    func setManualEnergy(_ value: Double, for trackId: String) {
+        energyOverrides[trackId] = min(1, max(0, value))
+        persistEnergyOverrides()
+        applyEnergyOverridesToCurrentLibrary()
+        syncPlayQueue()
+    }
+
+    func clearManualEnergy(for trackId: String) {
+        energyOverrides.removeValue(forKey: trackId)
+        persistEnergyOverrides()
+        applyEnergyOverridesToCurrentLibrary()
         syncPlayQueue()
     }
 

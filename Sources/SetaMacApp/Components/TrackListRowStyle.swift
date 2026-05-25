@@ -125,7 +125,7 @@ struct DraftTrackMetaColumn: View {
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 2) {
-            Text(track.energy.map { String(format: "%.2f", $0) } ?? "?")
+            Text(String(format: "%.2f", track.effectiveEnergy))
                 .font(.system(size: 8, weight: .semibold))
                 .padding(.horizontal, 4)
                 .padding(.vertical, 1)

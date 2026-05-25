@@ -8,6 +8,22 @@ public struct SetaLibrary: Decodable, Equatable {
     public let tracks: [SetaTrack]
     public let edges: [SetaEdge]
 
+    public init(
+        generatedAt: String? = nil,
+        tracksRoot: String? = nil,
+        curateRoot: String? = nil,
+        trackCount: Int,
+        tracks: [SetaTrack],
+        edges: [SetaEdge]
+    ) {
+        self.generatedAt = generatedAt
+        self.tracksRoot = tracksRoot
+        self.curateRoot = curateRoot
+        self.trackCount = trackCount
+        self.tracks = tracks
+        self.edges = edges
+    }
+
     enum CodingKeys: String, CodingKey {
         case generatedAt = "generated_at"
         case tracksRoot = "tracks_root"
@@ -40,6 +56,9 @@ public struct SetaLibrary: Decodable, Equatable {
             }
             if let energy = track.energy, !(0...1).contains(energy) {
                 issues.append("energy out of range for \(track.id): \(energy)")
+            }
+            if !(0...1).contains(track.effectiveEnergy) {
+                issues.append("effective energy out of range for \(track.id): \(track.effectiveEnergy)")
             }
             if let bpm = track.bpm, !(70...180).contains(bpm) {
                 issues.append("bpm out of map range for \(track.id): \(bpm)")
@@ -91,6 +110,16 @@ public struct SetaTrack: Decodable, Identifiable, Equatable {
     public let bpmConfidence: Double?
     public let key: String?
     public let energy: Double?
+    public let energyAuto: Double?
+    public let energyEffective: Double?
+    public let energyManual: Double?
+    public let energyMain: Double?
+    public let energyAvg: Double?
+    public let energyPeak: Double?
+    public let energyIntro: Double?
+    public let energyOutro: Double?
+    public let energyConfidence: Double?
+    public let energyCurve: [Double]?
     public let vocals: String?
     public let vocalsConfidence: Double?
     public let analysisError: String?
@@ -116,6 +145,16 @@ public struct SetaTrack: Decodable, Identifiable, Equatable {
         case bpmConfidence = "bpm_confidence"
         case key
         case energy
+        case energyAuto = "energy_auto"
+        case energyEffective = "energy_effective"
+        case energyManual = "energy_manual"
+        case energyMain = "energy_main"
+        case energyAvg = "energy_avg"
+        case energyPeak = "energy_peak"
+        case energyIntro = "energy_intro"
+        case energyOutro = "energy_outro"
+        case energyConfidence = "energy_confidence"
+        case energyCurve = "energy_curve"
         case vocals
         case vocalsConfidence = "vocals_confidence"
         case analysisError = "analysis_error"
@@ -135,6 +174,55 @@ public struct SetaTrack: Decodable, Identifiable, Equatable {
         let cleanArtist = artist?.trimmingCharacters(in: .whitespacesAndNewlines)
         return cleanArtist?.isEmpty == false ? cleanArtist! : "Unknown artist"
     }
+
+    public var effectiveEnergy: Double {
+        for value in [energyManual, energyEffective, energyAuto, energyMain, energy] {
+            if let value, value.isFinite {
+                return min(1, max(0, value))
+            }
+        }
+        return 0.5
+    }
+
+    public func applyingManualEnergy(_ value: Double?) -> SetaTrack {
+        let manual = value.map { min(1, max(0, $0)) }
+        let effective = manual ?? [energyAuto, energyMain, energy].compactMap { $0 }.first ?? 0.5
+        return SetaTrack(
+            id: id,
+            path: path,
+            artist: artist,
+            title: title,
+            source: source,
+            genre: genre,
+            batch: batch,
+            durationSec: durationSec,
+            bpm: bpm,
+            bpmRaw: bpmRaw,
+            bpmOctaveCorrected: bpmOctaveCorrected,
+            bpmSource: bpmSource,
+            bpmConfidence: bpmConfidence,
+            key: key,
+            energy: energy,
+            energyAuto: energyAuto,
+            energyEffective: effective,
+            energyManual: manual,
+            energyMain: energyMain,
+            energyAvg: energyAvg,
+            energyPeak: energyPeak,
+            energyIntro: energyIntro,
+            energyOutro: energyOutro,
+            energyConfidence: energyConfidence,
+            energyCurve: energyCurve,
+            vocals: vocals,
+            vocalsConfidence: vocalsConfidence,
+            analysisError: analysisError,
+            waveformVersion: waveformVersion,
+            waveformPeak: waveformPeak,
+            waveformLow: waveformLow,
+            waveformMid: waveformMid,
+            waveformHigh: waveformHigh
+        )
+    }
 }
 
 public struct SetaEdge: Decodable, Equatable {
@@ -142,4 +230,3 @@ public struct SetaEdge: Decodable, Equatable {
     public let target: String
     public let score: Double
 }
-
