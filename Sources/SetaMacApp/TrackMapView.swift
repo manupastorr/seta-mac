@@ -39,7 +39,7 @@ struct TrackMapView: View {
 
             ZStack(alignment: .topLeading) {
                 mapCanvas(layout: layout, origin: origin, size: proxy.size)
-                    .scaleEffect(scale)
+                    .scaleEffect(scale, anchor: .center)
                     .offset(offset)
 
                 axisOverlay(layout: layout, origin: origin)
@@ -63,8 +63,8 @@ struct TrackMapView: View {
                 DragGesture(minimumDistance: 0)
                     .onEnded { value in
                         guard hypot(value.translation.width, value.translation.height) < 6 else { return }
-                        guard scale <= 1.01, offset == .zero else { return }
-                        if let track = layout.nearestTrack(to: value.location, tracks: tracks) {
+                        let location = untransformedCanvasPoint(screen: value.location, canvasSize: proxy.size)
+                        if let track = layout.nearestTrack(to: location, tracks: tracks) {
                             selectedTrackID = track.id
                             onPlayTrack?(track.id)
                         } else {
@@ -97,7 +97,10 @@ struct TrackMapView: View {
 
     private var magnifyGesture: some Gesture {
         MagnificationGesture()
-            .onChanged { value in scale = min(4, max(1, lastScale * value)) }
+            .onChanged { value in
+                scale = min(4, max(1, lastScale * value))
+                if scale > 1.01 { clearHover() }
+            }
             .onEnded { _ in
                 lastScale = scale
                 if scale <= 1.01 { resetView() }
@@ -108,6 +111,7 @@ struct TrackMapView: View {
         DragGesture(minimumDistance: 8)
             .onChanged { value in
                 guard scale > 1.01 else { return }
+                clearHover()
                 offset = CGSize(
                     width: panBase.width + value.translation.width,
                     height: panBase.height + value.translation.height
@@ -121,6 +125,12 @@ struct TrackMapView: View {
         lastScale = 1
         offset = .zero
         panBase = .zero
+        clearHover()
+    }
+
+    private func clearHover() {
+        hoveredTrackID = nil
+        hoverLocation = nil
     }
 
     @ViewBuilder
@@ -218,6 +228,14 @@ struct TrackMapView: View {
         return CGPoint(
             x: center.x + (base.x - center.x) * scale + offset.width,
             y: center.y + (base.y - center.y) * scale + offset.height
+        )
+    }
+
+    private func untransformedCanvasPoint(screen: CGPoint, canvasSize: CGSize) -> CGPoint {
+        let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+        return CGPoint(
+            x: center.x + (screen.x - offset.width - center.x) / scale,
+            y: center.y + (screen.y - offset.height - center.y) / scale
         )
     }
 

@@ -205,44 +205,68 @@ private struct KeyboardShortcutsModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .focusable()
-            .onKeyPress(.space) { store.togglePlayPause(); return .handled }
+            .onKeyPress(.space) {
+                guard canUseGlobalShortcut else { return .ignored }
+                store.togglePlayPause()
+                return .handled
+            }
             .onKeyPress(.leftArrow) {
+                guard canUseGlobalShortcut else { return .ignored }
                 if NSEvent.modifierFlags.contains(.shift) { store.seekRelative(-10) }
                 else { store.playRelative(step: -1) }
                 return .handled
             }
             .onKeyPress(.rightArrow) {
+                guard canUseGlobalShortcut else { return .ignored }
                 if NSEvent.modifierFlags.contains(.shift) { store.seekRelative(10) }
                 else { store.playRelative(step: 1) }
                 return .handled
             }
             .onKeyPress(.upArrow) {
-                guard store.canQueueKeyboardNav, searchFocused.wrappedValue == false else { return .ignored }
+                guard store.canQueueKeyboardNav, canUseGlobalShortcut else { return .ignored }
                 store.moveQueueFocus(step: -1)
                 return .handled
             }
             .onKeyPress(.downArrow) {
-                guard store.canQueueKeyboardNav, searchFocused.wrappedValue == false else { return .ignored }
+                guard store.canQueueKeyboardNav, canUseGlobalShortcut else { return .ignored }
                 store.moveQueueFocus(step: 1)
                 return .handled
             }
             .onKeyPress(.return) {
-                guard store.canQueueKeyboardNav, searchFocused.wrappedValue == false else { return .ignored }
+                guard store.canQueueKeyboardNav, canUseGlobalShortcut else { return .ignored }
                 store.activateQueueFocus()
                 return .handled
             }
-            .onKeyPress("n") { store.toggleNeighborMode(); return .handled }
-            .onKeyPress("a") { store.addSelectedToDraft(); return .handled }
-            .onKeyPress("p") { store.playDraftFromStart(); return .handled }
-            .onKeyPress("e") { store.sortDraftByEnergy(); return .handled }
-            .onKeyPress("b") { store.sortDraftByBPM(); return .handled }
-            .onKeyPress("m") { store.openMixDock(tab: .neighbors); return .handled }
-            .onKeyPress("d") { store.openMixDock(tab: .draft); return .handled }
-            .onKeyPress("k") { store.camelotLegendOpen.toggle(); return .handled }
-            .onKeyPress("z") { store.momentsLegendOpen.toggle(); return .handled }
-            .onKeyPress("r") { mapResetTrigger = UUID(); return .handled }
-            .onKeyPress("/") { searchFocused.wrappedValue = true; return .handled }
-            .onKeyPress("?") { store.showShortcutsHelp = true; return .handled }
+            .onKeyPress("n") { handleGlobalShortcut { store.toggleNeighborMode() } }
+            .onKeyPress("a") { handleGlobalShortcut { store.addSelectedToDraft() } }
+            .onKeyPress("p") { handleGlobalShortcut { store.playDraftFromStart() } }
+            .onKeyPress("e") { handleGlobalShortcut { store.sortDraftByEnergy() } }
+            .onKeyPress("b") { handleGlobalShortcut { store.sortDraftByBPM() } }
+            .onKeyPress("m") { handleGlobalShortcut { store.openMixDock(tab: .neighbors) } }
+            .onKeyPress("d") { handleGlobalShortcut { store.openMixDock(tab: .draft) } }
+            .onKeyPress("k") { handleGlobalShortcut { store.camelotLegendOpen.toggle() } }
+            .onKeyPress("z") { handleGlobalShortcut { store.momentsLegendOpen.toggle() } }
+            .onKeyPress("r") { handleGlobalShortcut { mapResetTrigger = UUID() } }
+            .onKeyPress("/") {
+                guard canUseGlobalShortcut else { return .ignored }
+                searchFocused.wrappedValue = true
+                return .handled
+            }
+            .onKeyPress("?") { handleGlobalShortcut { store.showShortcutsHelp = true } }
+    }
+
+    private var canUseGlobalShortcut: Bool {
+        !searchFocused.wrappedValue && !isEditingText
+    }
+
+    private var isEditingText: Bool {
+        NSApp.keyWindow?.firstResponder is NSTextView
+    }
+
+    private func handleGlobalShortcut(_ action: () -> Void) -> KeyPress.Result {
+        guard canUseGlobalShortcut else { return .ignored }
+        action()
+        return .handled
     }
 }
 

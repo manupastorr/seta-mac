@@ -33,6 +33,15 @@ cd ../seta-mac
 - [ ] ← / → previous/next
 - [ ] Shift ← / → seek ±10s
 - [ ] `n` neighbor queue, `a` add draft, `p` play draft, `e`/`b` draft sort, `z` zones panel, `?` help
+- [ ] Typing shortcut letters in search or note fields enters text and does not trigger shortcuts.
+- [ ] Command-Control-F toggles native full screen.
+
+## Window / Map Interaction
+
+- [ ] At the minimum window size, the top bar and player are not cut off.
+- [ ] At full screen, clicking a node selects and plays the track.
+- [ ] After zooming the map, clicking a visible node still selects and plays the track.
+- [ ] Starting zoom while the loupe is visible hides the loupe immediately.
 
 ## Draft
 
