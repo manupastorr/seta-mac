@@ -11,6 +11,32 @@ struct SetaRootView: View {
     @FocusState private var searchFocused: Bool
 
     var body: some View {
+        workspace
+            .frame(minWidth: SetaTheme.minWindowWidth, minHeight: SetaTheme.minWindowHeight)
+            .background(SetaTheme.background)
+            .fileImporter(
+                isPresented: $showingImporter,
+                allowedContentTypes: [.json],
+                allowsMultipleSelection: false
+            ) { result in
+                if case let .success(urls) = result, let url = urls.first {
+                    _ = url.startAccessingSecurityScopedResource()
+                    store.load(url: url)
+                }
+            }
+            .sheet(isPresented: $store.showShortcutsHelp) {
+                ShortcutsHelpView()
+            }
+            .task {
+                if store.library == nil {
+                    store.autoLoadLibraryIfPossible()
+                }
+            }
+            .applyKeyboardShortcuts(store: store, mapResetTrigger: $mapResetTrigger, searchFocused: $searchFocused)
+            .background(WindowTitleSetter(title: "Seta 🍄"))
+    }
+
+    private var workspace: some View {
         GeometryReader { proxy in
             ZStack {
                 TrackMapView(
@@ -60,27 +86,6 @@ struct SetaRootView: View {
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
         }
-        .background(SetaTheme.background)
-        .fileImporter(
-            isPresented: $showingImporter,
-            allowedContentTypes: [.json],
-            allowsMultipleSelection: false
-        ) { result in
-            if case let .success(urls) = result, let url = urls.first {
-                _ = url.startAccessingSecurityScopedResource()
-                store.load(url: url)
-            }
-        }
-        .sheet(isPresented: $store.showShortcutsHelp) {
-            ShortcutsHelpView()
-        }
-        .task {
-            if store.library == nil {
-                store.autoLoadLibraryIfPossible()
-            }
-        }
-        .applyKeyboardShortcuts(store: store, mapResetTrigger: $mapResetTrigger, searchFocused: $searchFocused)
-        .background(WindowTitleSetter(title: "Seta 🍄"))
     }
 
     private var workspaceTopInset: CGFloat { SetaTheme.filterBarHeight + 18 }

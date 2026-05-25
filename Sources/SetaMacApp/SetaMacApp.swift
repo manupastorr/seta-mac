@@ -10,7 +10,7 @@ struct SetaMacApp: App {
             SetaRootView()
                 .environmentObject(store)
                 .preferredColorScheme(.light)
-                .frame(minWidth: 1180, minHeight: 760)
+                .frame(minWidth: SetaTheme.minWindowWidth, minHeight: SetaTheme.minWindowHeight)
         }
         .windowResizability(.contentMinSize)
         .defaultSize(width: 1440, height: 900)

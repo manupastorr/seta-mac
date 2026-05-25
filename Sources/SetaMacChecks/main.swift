@@ -275,9 +275,11 @@ func uiGeometryChecks() throws {
     let layout = MapPlotLayout(
         canvasSize: CGSize(width: 1200, height: 800),
         mixDockWidth: 278,
+        rightChrome: 214,
         bottomChrome: 82,
         energyDomain: 0.2 ... 1.0
     )
+    check(layout.plotWidth < 1200 - 278 - 64 - 36, "plot width reserves right chrome")
     check(layout.bpmX(70) < layout.bpmX(180), "bpm scale increases left to right")
     check(layout.energyY(1) < layout.energyY(0), "energy scale increases bottom to top")
 

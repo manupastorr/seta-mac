@@ -20,12 +20,14 @@ struct FilterBarView: View {
                 }
                 .frame(width: SetaTheme.brandColumnWidth, alignment: .leading)
 
-                HStack(alignment: .center, spacing: 8) {
-                    searchField
-                    sourceChips
-                    genrePicker
-                    bpmControls
-                    mapControls
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .center, spacing: 8) {
+                        searchField
+                        sourceChips
+                        genrePicker
+                        bpmControls
+                        mapControls
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -42,8 +44,9 @@ struct FilterBarView: View {
                 }
                 .buttonStyle(.borderless)
                 .foregroundStyle(SetaTheme.muted)
+                .fixedSize()
             }
-                .padding(.horizontal, 10)
+            .padding(.horizontal, 10)
             .padding(.vertical, 10)
         }
     }

@@ -17,6 +17,7 @@ struct TrackMapView: View {
     var activeMomentIDs: Set<String> = []
     var energyDomain: ClosedRange<Double> = MapPlotMetrics.energyDomain
     var mixDockWidth: CGFloat = 0
+    var rightChrome: CGFloat = SetaTheme.uiRightInset
     var bottomChrome: CGFloat = SetaTheme.playerHeight + 10
     var resetTrigger: UUID = UUID()
     var onPlayTrack: ((String) -> Void)?
@@ -32,6 +33,7 @@ struct TrackMapView: View {
             let layout = MapPlotLayout(
                 canvasSize: proxy.size,
                 mixDockWidth: mixDockWidth,
+                rightChrome: rightChrome,
                 bottomChrome: bottomChrome,
                 energyDomain: energyDomain
             )

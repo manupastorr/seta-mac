@@ -51,23 +51,15 @@ struct PlayerDock: View {
                         onSeek: { store.seekToProgress($0) }
                     )
                     .frame(height: 40)
-                    HStack {
+                    HStack(spacing: 8) {
                         Text(formatPlaybackTime(player.currentTime))
-                        Spacer()
+                            .fixedSize()
+                        Spacer(minLength: 8)
                         Text(formatPlaybackTime(player.duration))
-                        Spacer()
-                        HStack(spacing: 4) {
-                            SetaKbd(text: "?")
-                            Text("shortcuts ·")
-                            SetaKbd(text: "/")
-                            Text("search ·")
-                            SetaKbd(text: "a")
-                            Text("add ·")
-                            SetaKbd(text: "d")
-                            Text("draft")
-                        }
-                        .font(.system(size: 10))
-                        .foregroundStyle(SetaTheme.muted)
+                            .fixedSize()
+                        Spacer(minLength: 8)
+                        PlayerShortcutHints()
+                            .layoutPriority(-1)
                     }
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(SetaTheme.muted)
@@ -194,6 +186,36 @@ struct WaveformView: View {
         let total = max(low + mid + high, 0.0001)
         let mix = low / total * 0.2 + mid / total * 0.55 + high / total * 0.95
         return SetaTheme.accent.opacity(0.35 + mix * 0.55)
+    }
+}
+
+private struct PlayerShortcutHints: View {
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 4) {
+                SetaKbd(text: "?")
+                Text("shortcuts ·")
+                SetaKbd(text: "/")
+                Text("search ·")
+                SetaKbd(text: "a")
+                Text("add ·")
+                SetaKbd(text: "d")
+                Text("draft")
+            }
+            HStack(spacing: 4) {
+                SetaKbd(text: "?")
+                Text("·")
+                SetaKbd(text: "/")
+                Text("·")
+                SetaKbd(text: "a")
+                Text("·")
+                SetaKbd(text: "d")
+            }
+        }
+        .font(.system(size: 10))
+        .foregroundStyle(SetaTheme.muted)
+        .lineLimit(1)
+        .minimumScaleFactor(0.85)
     }
 }
 

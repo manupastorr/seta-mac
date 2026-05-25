@@ -40,13 +40,14 @@ public struct MapPlotLayout: Equatable, Sendable {
     public init(
         canvasSize: CGSize,
         mixDockWidth: CGFloat = 0,
+        rightChrome: CGFloat = 0,
         bottomChrome: CGFloat = 82,
         energyDomain: ClosedRange<Double> = MapPlotMetrics.energyDomain
     ) {
         canvasWidth = canvasSize.width
         canvasHeight = max(canvasSize.height, 200)
         plotLeft = mixDockWidth + MapPlotMetrics.Margin.left
-        plotWidth = max(120, canvasWidth - plotLeft - MapPlotMetrics.Margin.right)
+        plotWidth = max(120, canvasWidth - plotLeft - MapPlotMetrics.Margin.right - rightChrome)
         plotHeight = max(
             120,
             canvasHeight - MapPlotMetrics.Margin.top - MapPlotMetrics.Margin.bottom - bottomChrome
