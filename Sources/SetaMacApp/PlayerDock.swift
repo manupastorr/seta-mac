@@ -42,7 +42,8 @@ struct PlayerDock: View {
                             .padding(.top, 2)
                     }
                 }
-                .frame(minWidth: 180, maxWidth: 280, alignment: .leading)
+                .frame(minWidth: 140, maxWidth: 260, alignment: .leading)
+                .layoutPriority(1)
 
                 VStack(spacing: 4) {
                     WaveformView(

@@ -11,10 +11,11 @@ enum SetaTheme {
     static let accentSoft = Color(hex: "#6b4fd8").opacity(0.12)
     static let draftGold = Color(hex: "#f5a623")
 
-    static let minWindowWidth: CGFloat = 1180
+    static let minWindowWidth: CGFloat = 1280
     static let minWindowHeight: CGFloat = 760
-    static let filterBarHeight: CGFloat = 62
-    static let playerHeight: CGFloat = 72
+    static let filterBarHeight: CGFloat = 68
+    static let playerHeight: CGFloat = 88
+    static let legendHeaderChrome: CGFloat = 96
     static let mixDockWidth: CGFloat = 268
     static let legendWidth: CGFloat = 172
     static let uiRightInset: CGFloat = 214

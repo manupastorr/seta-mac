@@ -28,6 +28,7 @@ struct FilterBarView: View {
                         bpmControls
                         mapControls
                     }
+                    .fixedSize(horizontal: true, vertical: false)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 

@@ -38,6 +38,12 @@ struct SetaRootView: View {
 
     private var workspace: some View {
         GeometryReader { proxy in
+            let insets = proxy.safeAreaInsets
+            let size = CGSize(
+                width: max(0, proxy.size.width - insets.leading - insets.trailing),
+                height: max(0, proxy.size.height - insets.top - insets.bottom)
+            )
+
             ZStack {
                 TrackMapView(
                     tracks: store.filteredTracks,
@@ -55,6 +61,7 @@ struct SetaRootView: View {
                     activeMomentIDs: store.filter.moments,
                     energyDomain: store.energyDisplayDomain,
                     mixDockWidth: store.mixDockExpanded ? SetaTheme.mixDockWidth + 10 : 0,
+                    rightChrome: mapRightChrome,
                     bottomChrome: SetaTheme.playerHeight + 10,
                     resetTrigger: mapResetTrigger,
                     onPlayTrack: { store.playTrackViaView(id: $0) }
@@ -71,7 +78,7 @@ struct SetaRootView: View {
                     PlayerDock(store: store)
                 }
 
-                sidePanelsLayer(in: proxy.size)
+                sidePanelsLayer(in: size)
                 searchResultsLayer
 
                 if store.highlightNeighbors {
@@ -84,8 +91,20 @@ struct SetaRootView: View {
                     .padding(.top, SetaTheme.filterBarHeight + (store.highlightNeighbors ? 38 : 10))
                     .frame(maxWidth: .infinity, alignment: .top)
             }
-            .frame(width: proxy.size.width, height: proxy.size.height)
+            .frame(width: size.width, height: size.height)
+            .padding(.top, insets.top)
+            .padding(.leading, insets.leading)
+            .padding(.trailing, insets.trailing)
+            .padding(.bottom, insets.bottom)
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
         }
+    }
+
+    private var mapRightChrome: CGFloat {
+        if store.momentsLegendOpen || store.camelotLegendOpen {
+            return SetaTheme.legendWidth + 42
+        }
+        return SetaTheme.legendHeaderChrome
     }
 
     private var workspaceTopInset: CGFloat { SetaTheme.filterBarHeight + 18 }

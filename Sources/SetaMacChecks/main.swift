@@ -279,7 +279,7 @@ func uiGeometryChecks() throws {
         bottomChrome: 82,
         energyDomain: 0.2 ... 1.0
     )
-    check(layout.plotWidth < 1200 - 278 - 64 - 36, "plot width reserves right chrome")
+    check(layout.plotWidth <= 1200 - 278 - 64 - 36 - 214, "plot width reserves right chrome")
     check(layout.bpmX(70) < layout.bpmX(180), "bpm scale increases left to right")
     check(layout.energyY(1) < layout.energyY(0), "energy scale increases bottom to top")
 
