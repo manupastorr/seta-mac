@@ -27,6 +27,11 @@ struct TrackMapView: View {
     @State private var offset: CGSize = .zero
     @State private var panBase: CGSize = .zero
     @State private var hoverLocation: CGPoint?
+    @State private var isPanning = false
+
+    private var showsLoupe: Bool {
+        scale <= 1.01 && offset == .zero
+    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -46,7 +51,8 @@ struct TrackMapView: View {
 
                 axisOverlay(layout: layout, origin: origin)
 
-                if let hoveredID = hoveredTrackID,
+                if showsLoupe,
+                   let hoveredID = hoveredTrackID,
                    let hovered = tracks.first(where: { $0.id == hoveredID }) {
                     let anchor = hoverLocation ?? transformedScreenPoint(
                         local: layout.trackPoint(for: hovered, jitter: true),
@@ -77,12 +83,14 @@ struct TrackMapView: View {
             .onContinuousHover { phase in
                 switch phase {
                 case .active(let location):
-                    guard scale <= 1.01, offset == .zero else {
+                    guard !isPanning else {
                         hoveredTrackID = nil
                         hoverLocation = nil
                         return
                     }
-                    if let nearest = layout.nearestTrack(to: location, tracks: tracks) {
+                    let canvasLocation = untransformedCanvasPoint(screen: location, canvasSize: proxy.size)
+                    let pickRadius = 10 / max(scale, 1)
+                    if let nearest = layout.nearestTrack(to: canvasLocation, tracks: tracks, pickRadius: pickRadius) {
                         hoveredTrackID = nearest.id
                         hoverLocation = location
                     } else {
@@ -113,13 +121,17 @@ struct TrackMapView: View {
         DragGesture(minimumDistance: 8)
             .onChanged { value in
                 guard scale > 1.01 else { return }
+                isPanning = true
                 clearHover()
                 offset = CGSize(
                     width: panBase.width + value.translation.width,
                     height: panBase.height + value.translation.height
                 )
             }
-            .onEnded { _ in panBase = offset }
+            .onEnded { _ in
+                isPanning = false
+                panBase = offset
+            }
     }
 
     private func resetView() {
@@ -127,6 +139,7 @@ struct TrackMapView: View {
         lastScale = 1
         offset = .zero
         panBase = .zero
+        isPanning = false
         clearHover()
     }
 
@@ -147,7 +160,7 @@ struct TrackMapView: View {
                 drawGraphEdges(context: &context, layout: layout)
             }
             drawMixLinks(context: &context, layout: layout)
-            drawTracks(context: &context, layout: layout)
+            drawTracks(context: &context, layout: layout, mapScale: scale)
         }
         .onChange(of: resetTrigger) { _, _ in resetView() }
     }
@@ -314,56 +327,101 @@ struct TrackMapView: View {
         }
     }
 
-    private func drawTracks(context: inout GraphicsContext, layout: MapPlotLayout) {
+    private func drawTracks(context: inout GraphicsContext, layout: MapPlotLayout, mapScale: CGFloat) {
         let anchor = neighborAnchorID
         let neighbors = neighborHighlightIDs
+        let zoomHoverID = mapScale > 1.01 ? hoveredTrackID : nil
 
         for track in tracks {
             guard track.bpm != nil else { continue }
-            let point = layout.trackPoint(for: track, jitter: true)
-            let isSelected = track.id == selectedTrackID || track.id == anchor
-            let isPlaying = track.id == playingTrackID
-            let isNeighbor = neighbors.contains(track.id)
-            let isHovered = track.id == hoveredTrackID
-            let isDraft = draftTrackIDs.contains(track.id)
-            let isFinal = draftFinalIDs.contains(track.id)
+            if track.id == zoomHoverID { continue }
+            drawTrackNode(
+                context: &context,
+                layout: layout,
+                track: track,
+                anchor: anchor,
+                neighbors: neighbors,
+                mapScale: mapScale,
+                zoomHighlight: false
+            )
+        }
 
-            let radius = TrackPresentation.nodeRadius(for: track, hovered: isHovered)
-            let rect = CGRect(x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2)
-            var color = Color(hex: Camelot.colorHex(track.key))
+        if let zoomHoverID,
+           let hovered = tracks.first(where: { $0.id == zoomHoverID }) {
+            drawTrackNode(
+                context: &context,
+                layout: layout,
+                track: hovered,
+                anchor: anchor,
+                neighbors: neighbors,
+                mapScale: mapScale,
+                zoomHighlight: true
+            )
+        }
+    }
 
-            if neighbors.isEmpty {
-                // full opacity
-            } else if isNeighbor, !isSelected {
-                color = color.opacity(0.95)
-            } else if !isNeighbor, !isSelected {
-                color = color.opacity(0.2)
-            }
+    private func drawTrackNode(
+        context: inout GraphicsContext,
+        layout: MapPlotLayout,
+        track: SetaTrack,
+        anchor: String?,
+        neighbors: Set<String>,
+        mapScale: CGFloat,
+        zoomHighlight: Bool
+    ) {
+        let point = layout.trackPoint(for: track, jitter: true)
+        let isSelected = track.id == selectedTrackID || track.id == anchor
+        let isPlaying = track.id == playingTrackID
+        let isNeighbor = neighbors.contains(track.id)
+        let isHovered = track.id == hoveredTrackID
+        let isDraft = draftTrackIDs.contains(track.id)
+        let isFinal = draftFinalIDs.contains(track.id)
 
-            context.fill(Path(ellipseIn: rect), with: .color(color))
-            context.stroke(Path(ellipseIn: rect), with: .color(.black.opacity(0.12)), lineWidth: 0.5)
+        let radius: CGFloat
+        if zoomHighlight {
+            radius = TrackPresentation.zoomHoveredNodeRadius(for: track)
+        } else {
+            radius = TrackPresentation.nodeRadius(for: track, hovered: isHovered && showsLoupe)
+        }
 
-            if isDraft {
-                context.stroke(
-                    Path(ellipseIn: rect.insetBy(dx: -1.5, dy: -1.5)),
-                    with: .color(SetaTheme.draftGold.opacity(isFinal ? 0.9 : 0.45)),
-                    lineWidth: isFinal ? 1.5 : 1
-                )
-            }
+        let rect = CGRect(x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2)
+        var color = Color(hex: Camelot.colorHex(track.key))
 
-            if isPlaying || isSelected {
-                context.stroke(
-                    Path(ellipseIn: rect.insetBy(dx: -2.5, dy: -2.5)),
-                    with: .color(SetaTheme.accent),
-                    lineWidth: isPlaying ? 1.5 : 1.25
-                )
-            } else if isNeighbor {
-                context.stroke(
-                    Path(ellipseIn: rect.insetBy(dx: -2, dy: -2)),
-                    with: .color(SetaTheme.accent.opacity(0.8)),
-                    lineWidth: 1.25
-                )
-            }
+        if neighbors.isEmpty {
+            // full opacity
+        } else if isNeighbor, !isSelected {
+            color = color.opacity(0.95)
+        } else if !isNeighbor, !isSelected {
+            color = color.opacity(0.2)
+        }
+
+        context.fill(Path(ellipseIn: rect), with: .color(color))
+        context.stroke(
+            Path(ellipseIn: rect),
+            with: .color(zoomHighlight ? SetaTheme.accent.opacity(0.35) : .black.opacity(0.12)),
+            lineWidth: zoomHighlight ? 1 : 0.5
+        )
+
+        if isDraft {
+            context.stroke(
+                Path(ellipseIn: rect.insetBy(dx: -1.5, dy: -1.5)),
+                with: .color(SetaTheme.draftGold.opacity(isFinal ? 0.9 : 0.45)),
+                lineWidth: isFinal ? 1.5 : 1
+            )
+        }
+
+        if zoomHighlight || isPlaying || isSelected {
+            context.stroke(
+                Path(ellipseIn: rect.insetBy(dx: -2.5, dy: -2.5)),
+                with: .color(SetaTheme.accent),
+                lineWidth: zoomHighlight ? 1.5 : (isPlaying ? 1.5 : 1.25)
+            )
+        } else if isNeighbor {
+            context.stroke(
+                Path(ellipseIn: rect.insetBy(dx: -2, dy: -2)),
+                with: .color(SetaTheme.accent.opacity(0.8)),
+                lineWidth: 1.25
+            )
         }
     }
 }

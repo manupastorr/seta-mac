@@ -41,6 +41,7 @@ cd ../seta-mac
 - [ ] At the minimum window size, the top bar and player are not cut off.
 - [ ] At full screen, clicking a node selects and plays the track.
 - [ ] After zooming the map, clicking a visible node still selects and plays the track.
+- [ ] When zoomed in without the loupe, hovering a node scales it up with an accent ring.
 - [ ] Starting zoom while the loupe is visible hides the loupe immediately.
 
 ## Draft

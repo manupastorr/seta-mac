@@ -5,10 +5,15 @@ public enum TrackPresentation {
     public static let lowBPMConfidence = 0.45
     public static let vocalsShowConfidence = 0.55
     public static let hoverRadiusBoost: CGFloat = 5
+    public static let zoomHoverScale: CGFloat = 2.5
 
     public static func nodeRadius(for track: SetaTrack, hovered: Bool = false) -> CGFloat {
         let base = 3 + CGFloat((track.durationSec.map { min($0 / 180, 1) } ?? 0))
         return hovered ? base + hoverRadiusBoost : base
+    }
+
+    public static func zoomHoveredNodeRadius(for track: SetaTrack) -> CGFloat {
+        nodeRadius(for: track) * zoomHoverScale
     }
 
     public struct Badge: Equatable, Sendable {

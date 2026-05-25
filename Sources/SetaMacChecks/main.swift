@@ -311,6 +311,10 @@ func uiGeometryChecks() throws {
     let badges = TrackPresentation.badges(for: track)
     check(badges.first?.kind == .bpm, "track badges include bpm")
     check(TrackPresentation.nodeRadius(for: track, hovered: true) > TrackPresentation.nodeRadius(for: track), "hover radius boost")
+    check(
+        TrackPresentation.zoomHoveredNodeRadius(for: track) > TrackPresentation.nodeRadius(for: track, hovered: true),
+        "zoom hover radius boost"
+    )
 
     let domain = MapPlotLayout.computeEnergyDisplayDomain(tracks: library.tracks)
     check(domain.upperBound == 1, "energy display domain top")
