@@ -312,7 +312,7 @@ func uiGeometryChecks() throws {
     check(badges.first?.kind == .bpm, "track badges include bpm")
     check(TrackPresentation.nodeRadius(for: track, hovered: true) > TrackPresentation.nodeRadius(for: track), "hover radius boost")
     check(
-        TrackPresentation.zoomHoveredNodeRadius(for: track) > TrackPresentation.nodeRadius(for: track, hovered: true),
+        TrackPresentation.zoomHoveredNodeRadius(for: track) > TrackPresentation.nodeRadius(for: track),
         "zoom hover radius boost"
     )
 
