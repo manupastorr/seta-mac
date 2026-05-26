@@ -51,6 +51,8 @@ struct TrackMapView: View {
 
                 axisOverlay(layout: layout, origin: origin)
 
+                zoomHoverOverlay(layout: layout, origin: origin, canvasSize: proxy.size)
+
                 if showsLoupe,
                    let hoveredID = hoveredTrackID,
                    let hovered = tracks.first(where: { $0.id == hoveredID }) {
@@ -149,6 +151,30 @@ struct TrackMapView: View {
     }
 
     @ViewBuilder
+    private func zoomHoverOverlay(layout: MapPlotLayout, origin: CGPoint, canvasSize: CGSize) -> some View {
+        if !showsLoupe,
+           let hoveredID = hoveredTrackID,
+           let hovered = tracks.first(where: { $0.id == hoveredID }) {
+            let local = layout.trackPoint(for: hovered, jitter: true)
+            let center = transformedScreenPoint(local: local, origin: origin, canvasSize: canvasSize)
+            let radius = TrackPresentation.zoomHoveredNodeRadius(for: hovered) * scale
+            let fill = Color(hex: Camelot.colorHex(hovered.key))
+
+            Circle()
+                .fill(fill)
+                .frame(width: radius * 2, height: radius * 2)
+                .overlay {
+                    Circle()
+                        .strokeBorder(SetaTheme.accent, lineWidth: 1.5)
+                }
+                .shadow(color: fill.opacity(0.35), radius: 4, y: 1)
+                .position(x: center.x, y: center.y)
+                .allowsHitTesting(false)
+                .zIndex(4)
+        }
+    }
+
+    @ViewBuilder
     private func mapCanvas(layout: MapPlotLayout, origin: CGPoint, size: CGSize) -> some View {
         Canvas { context, _ in
             context.translateBy(x: origin.x, y: origin.y)
@@ -160,8 +186,9 @@ struct TrackMapView: View {
                 drawGraphEdges(context: &context, layout: layout)
             }
             drawMixLinks(context: &context, layout: layout)
-            drawTracks(context: &context, layout: layout, mapScale: scale)
+            drawTracks(context: &context, layout: layout)
         }
+        .id("\(hoveredTrackID ?? "")-\(scale)-\(offset.width)-\(offset.height)")
         .onChange(of: resetTrigger) { _, _ in resetView() }
     }
 
@@ -327,35 +354,21 @@ struct TrackMapView: View {
         }
     }
 
-    private func drawTracks(context: inout GraphicsContext, layout: MapPlotLayout, mapScale: CGFloat) {
+    private func drawTracks(context: inout GraphicsContext, layout: MapPlotLayout) {
         let anchor = neighborAnchorID
         let neighbors = neighborHighlightIDs
-        let zoomHoverID = mapScale > 1.01 ? hoveredTrackID : nil
+        let skipHoveredInCanvas = !showsLoupe && hoveredTrackID != nil
 
         for track in tracks {
             guard track.bpm != nil else { continue }
-            if track.id == zoomHoverID { continue }
+            if skipHoveredInCanvas, track.id == hoveredTrackID { continue }
             drawTrackNode(
                 context: &context,
                 layout: layout,
                 track: track,
                 anchor: anchor,
                 neighbors: neighbors,
-                mapScale: mapScale,
                 zoomHighlight: false
-            )
-        }
-
-        if let zoomHoverID,
-           let hovered = tracks.first(where: { $0.id == zoomHoverID }) {
-            drawTrackNode(
-                context: &context,
-                layout: layout,
-                track: hovered,
-                anchor: anchor,
-                neighbors: neighbors,
-                mapScale: mapScale,
-                zoomHighlight: true
             )
         }
     }
@@ -366,7 +379,6 @@ struct TrackMapView: View {
         track: SetaTrack,
         anchor: String?,
         neighbors: Set<String>,
-        mapScale: CGFloat,
         zoomHighlight: Bool
     ) {
         let point = layout.trackPoint(for: track, jitter: true)
@@ -383,7 +395,6 @@ struct TrackMapView: View {
         } else {
             radius = TrackPresentation.nodeRadius(for: track, hovered: isHovered && showsLoupe)
         }
-
         let rect = CGRect(x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2)
         var color = Color(hex: Camelot.colorHex(track.key))
 
