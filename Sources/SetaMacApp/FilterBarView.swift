@@ -31,10 +31,14 @@ struct FilterBarView: View {
                     }
                     .help("Open library.json")
                     Button { store.rescanLibrary() } label: {
-                        Image(systemName: "arrow.clockwise")
+                        if compact {
+                            Image(systemName: "arrow.clockwise")
+                        } else {
+                            Label("Rescan", systemImage: "arrow.clockwise")
+                        }
                     }
                     .disabled(store.isRescanning || store.scannerRootURL == nil)
-                    .help("Rescan library")
+                    .help("Rescan library (pick up new tracks in To Curate)")
                 }
                 .buttonStyle(.borderless)
                 .foregroundStyle(SetaTheme.muted)
