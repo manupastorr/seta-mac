@@ -10,6 +10,7 @@ Reads `library.json` from the Python scanner and implements the core DJ workflow
 ./scripts/verify-all.sh   # Swift checks + real library smoke + release app + seta tests
 ./scripts/run.sh          # dev run
 open dist/SetaMac.app     # after verify-all or build-app.sh
+./scripts/install-raycast.sh  # add raycast/ as a Script Directory, then search "Open Seta"
 ```
 
 Optional signing/notarization (requires Apple Developer credentials):
