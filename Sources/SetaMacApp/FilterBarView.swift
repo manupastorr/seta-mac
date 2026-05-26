@@ -6,19 +6,12 @@ struct FilterBarView: View {
     @FocusState.Binding var searchFocused: Bool
     @Binding var showingImporter: Bool
     @Binding var mapResetTrigger: UUID
+    var compact: Bool = false
 
     var body: some View {
         FloatingChrome {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Seta 🍄")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(SetaTheme.text)
-                    Text("BPM × intensity · mix hints")
-                        .font(.system(size: 10))
-                        .foregroundStyle(SetaTheme.muted)
-                }
-                .frame(width: SetaTheme.brandColumnWidth, alignment: .leading)
+            HStack(alignment: .center, spacing: compact ? 8 : 12) {
+                brandColumn
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(alignment: .center, spacing: 8) {
@@ -48,7 +41,27 @@ struct FilterBarView: View {
                 .fixedSize()
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 10)
+            .padding(.vertical, compact ? 8 : 10)
+        }
+    }
+
+    @ViewBuilder
+    private var brandColumn: some View {
+        if compact {
+            Text("Seta 🍄")
+                .font(.system(size: 17, weight: .bold))
+                .foregroundStyle(SetaTheme.text)
+                .frame(width: 52, alignment: .leading)
+        } else {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Seta 🍄")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(SetaTheme.text)
+                Text("BPM × intensity · mix hints")
+                    .font(.system(size: 10))
+                    .foregroundStyle(SetaTheme.muted)
+            }
+            .frame(width: SetaTheme.brandColumnWidth, alignment: .leading)
         }
     }
 
@@ -66,7 +79,7 @@ struct FilterBarView: View {
                     .strokeBorder(SetaTheme.panelBorder)
             }
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .frame(width: SetaTheme.searchFieldWidth)
+            .frame(width: compact ? 220 : SetaTheme.searchFieldWidth)
             .focused($searchFocused)
             .onChange(of: store.filter.query) { _, _ in
                 store.resetSearchResultsIndex()
@@ -90,24 +103,51 @@ struct FilterBarView: View {
 
     private var sourceChips: some View {
         HStack(spacing: 5) {
-            SetaChip(title: "All", isActive: allSourcesActive) {
-                store.filter.sources = ["tracks", "to_curate"]
-                store.filter.draftOnly = false
-                store.syncPlayQueue()
-            }
-            SetaChip(title: "Library", isActive: store.filter.sources == ["tracks"] && !store.filter.draftOnly) {
-                store.filter.sources = ["tracks"]
-                store.filter.draftOnly = false
-                store.syncPlayQueue()
-            }
-            SetaChip(title: "Curate", isActive: store.filter.sources == ["to_curate"] && !store.filter.draftOnly) {
-                store.filter.sources = ["to_curate"]
-                store.filter.draftOnly = false
-                store.syncPlayQueue()
-            }
-            SetaChip(title: "Draft only", isActive: store.filter.draftOnly, isDisabled: store.draft.trackIds.isEmpty) {
-                store.filter.draftOnly.toggle()
-                store.syncPlayQueue()
+            if compact {
+                SetaIconChip(systemImage: "square.grid.2x2", help: "All sources", isActive: allSourcesActive) {
+                    store.filter.sources = ["tracks", "to_curate"]
+                    store.filter.draftOnly = false
+                    store.syncPlayQueue()
+                }
+                SetaIconChip(systemImage: "music.note.list", help: "Library", isActive: store.filter.sources == ["tracks"] && !store.filter.draftOnly) {
+                    store.filter.sources = ["tracks"]
+                    store.filter.draftOnly = false
+                    store.syncPlayQueue()
+                }
+                SetaIconChip(systemImage: "tray.and.arrow.down", help: "Curate", isActive: store.filter.sources == ["to_curate"] && !store.filter.draftOnly) {
+                    store.filter.sources = ["to_curate"]
+                    store.filter.draftOnly = false
+                    store.syncPlayQueue()
+                }
+                SetaIconChip(
+                    systemImage: "list.star",
+                    help: "Draft only",
+                    isActive: store.filter.draftOnly,
+                    isDisabled: store.draft.trackIds.isEmpty
+                ) {
+                    store.filter.draftOnly.toggle()
+                    store.syncPlayQueue()
+                }
+            } else {
+                SetaChip(title: "All", isActive: allSourcesActive) {
+                    store.filter.sources = ["tracks", "to_curate"]
+                    store.filter.draftOnly = false
+                    store.syncPlayQueue()
+                }
+                SetaChip(title: "Library", isActive: store.filter.sources == ["tracks"] && !store.filter.draftOnly) {
+                    store.filter.sources = ["tracks"]
+                    store.filter.draftOnly = false
+                    store.syncPlayQueue()
+                }
+                SetaChip(title: "Curate", isActive: store.filter.sources == ["to_curate"] && !store.filter.draftOnly) {
+                    store.filter.sources = ["to_curate"]
+                    store.filter.draftOnly = false
+                    store.syncPlayQueue()
+                }
+                SetaChip(title: "Draft only", isActive: store.filter.draftOnly, isDisabled: store.draft.trackIds.isEmpty) {
+                    store.filter.draftOnly.toggle()
+                    store.syncPlayQueue()
+                }
             }
         }
     }
@@ -124,7 +164,7 @@ struct FilterBarView: View {
             }
         }
         .labelsHidden()
-        .frame(width: 160)
+        .frame(width: compact ? 132 : 160)
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
         .background(SetaTheme.panel)
@@ -146,21 +186,35 @@ struct FilterBarView: View {
 
     private var mapControls: some View {
         HStack(spacing: 5) {
-            SetaChip(title: "Mix map", isActive: !store.settings.showExploreLinks) {
-                store.settings.showExploreLinks = false
-                store.saveSettings()
+            if compact {
+                SetaIconChip(systemImage: "map", help: "Mix map", isActive: !store.settings.showExploreLinks) {
+                    store.settings.showExploreLinks = false
+                    store.saveSettings()
+                }
+                SetaIconChip(systemImage: "link", help: "Mix links", isActive: store.settings.showExploreLinks) {
+                    store.settings.showExploreLinks = true
+                    store.saveSettings()
+                }
+                SetaIconChip(systemImage: "arrow.counterclockwise", help: "Reset view") {
+                    mapResetTrigger = UUID()
+                }
+            } else {
+                SetaChip(title: "Mix map", isActive: !store.settings.showExploreLinks) {
+                    store.settings.showExploreLinks = false
+                    store.saveSettings()
+                }
+                SetaChip(title: "Mix links", isActive: store.settings.showExploreLinks) {
+                    store.settings.showExploreLinks = true
+                    store.saveSettings()
+                }
+                SetaSecondaryButton(title: "Reset view") {
+                    mapResetTrigger = UUID()
+                }
             }
-            SetaChip(title: "Mix links", isActive: store.settings.showExploreLinks) {
-                store.settings.showExploreLinks = true
-                store.saveSettings()
-            }
-            if store.settings.showExploreLinks, !store.libraryHasMixEdges {
+            if !compact, store.settings.showExploreLinks, !store.libraryHasMixEdges {
                 Text("Mix links not built for this scan")
                     .font(.system(size: 10))
                     .foregroundStyle(SetaTheme.muted)
-            }
-            SetaSecondaryButton(title: "Reset view") {
-                mapResetTrigger = UUID()
             }
         }
     }

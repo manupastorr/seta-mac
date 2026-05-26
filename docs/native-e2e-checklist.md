@@ -25,6 +25,7 @@ cd ../seta-mac
 - [ ] Clicking `Auto` clears the manual intensity override and returns to scanner energy.
 - [ ] Player dock plays local audio, seeks via waveform, and shows elapsed/total time.
 - [ ] Top filter bar does not wrap chip labels or clip Reset/open/rescan controls at the default window width.
+- [ ] In windowed mode the filter bar uses icon buttons with tooltips and sits flush under the title bar.
 - [ ] Set-zone overlays are visible but do not overpower track dots.
 
 ## Keyboard / Menu

@@ -13,6 +13,7 @@ enum SetaTheme {
 
     static let minWindowWidth: CGFloat = 1280
     static let minWindowHeight: CGFloat = 760
+    static let compactToolbarWidth: CGFloat = 1360
     static let filterBarHeight: CGFloat = 68
     static let playerHeight: CGFloat = 88
     static let legendHeaderChrome: CGFloat = 96
@@ -119,6 +120,36 @@ struct SetaChip: View {
         .buttonStyle(.plain)
         .disabled(isDisabled)
         .opacity(isDisabled ? 0.45 : 1)
+    }
+}
+
+struct SetaIconChip: View {
+    let systemImage: String
+    let help: String
+    var isActive: Bool = false
+    var isDisabled: Bool = false
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(isActive ? SetaTheme.accent : SetaTheme.muted)
+                .frame(width: 28, height: 28)
+                .background(isActive ? SetaTheme.accentSoft : SetaTheme.panel)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(
+                            isActive ? SetaTheme.accent.opacity(0.32) : SetaTheme.panelBorder,
+                            lineWidth: 1
+                        )
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .opacity(isDisabled ? 0.45 : 1)
+        .help(help)
     }
 }
 

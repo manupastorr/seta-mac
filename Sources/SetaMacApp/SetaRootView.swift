@@ -9,6 +9,7 @@ struct SetaRootView: View {
     @State private var mapResetTrigger = UUID()
     @State private var hoveredTrackID: String?
     @FocusState private var searchFocused: Bool
+    @State private var isWindowFullscreen = false
 
     var body: some View {
         workspace
@@ -38,11 +39,7 @@ struct SetaRootView: View {
 
     private var workspace: some View {
         GeometryReader { proxy in
-            let insets = proxy.safeAreaInsets
-            let size = CGSize(
-                width: max(0, proxy.size.width - insets.leading - insets.trailing),
-                height: max(0, proxy.size.height - insets.top - insets.bottom)
-            )
+            let compactToolbar = !isWindowFullscreen || proxy.size.width < SetaTheme.compactToolbarWidth
 
             ZStack {
                 TrackMapView(
@@ -72,13 +69,14 @@ struct SetaRootView: View {
                         store: store,
                         searchFocused: $searchFocused,
                         showingImporter: $showingImporter,
-                        mapResetTrigger: $mapResetTrigger
+                        mapResetTrigger: $mapResetTrigger,
+                        compact: compactToolbar
                     )
                     Spacer(minLength: 0)
                     PlayerDock(store: store)
                 }
 
-                sidePanelsLayer(in: size)
+                sidePanelsLayer(in: proxy.size)
                 searchResultsLayer
 
                 if store.highlightNeighbors {
@@ -91,13 +89,9 @@ struct SetaRootView: View {
                     .padding(.top, SetaTheme.filterBarHeight + (store.highlightNeighbors ? 38 : 10))
                     .frame(maxWidth: .infinity, alignment: .top)
             }
-            .frame(width: size.width, height: size.height)
-            .padding(.top, insets.top)
-            .padding(.leading, insets.leading)
-            .padding(.trailing, insets.trailing)
-            .padding(.bottom, insets.bottom)
-            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
+            .frame(width: proxy.size.width, height: proxy.size.height)
         }
+        .background(WindowLayoutTracker(isFullscreen: $isWindowFullscreen))
     }
 
     private var mapRightChrome: CGFloat {
@@ -218,6 +212,58 @@ private struct WindowTitleSetter: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSView, context: Context) {
         nsView.window?.title = title
+    }
+}
+
+private struct WindowLayoutTracker: NSViewRepresentable {
+    @Binding var isFullscreen: Bool
+
+    func makeNSView(context: Context) -> FullscreenObserverView {
+        FullscreenObserverView()
+    }
+
+    func updateNSView(_ nsView: FullscreenObserverView, context: Context) {
+        nsView.onFullscreenChange = { value in
+            isFullscreen = value
+        }
+        nsView.publishFullscreenState()
+    }
+}
+
+private final class FullscreenObserverView: NSView {
+    var onFullscreenChange: ((Bool) -> Void)?
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        registerWindowObservers()
+        publishFullscreenState()
+    }
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        if let window {
+            NotificationCenter.default.removeObserver(self, name: nil, object: window)
+        }
+        super.viewWillMove(toWindow: newWindow)
+    }
+
+    @objc func publishFullscreenState() {
+        onFullscreenChange?(window?.styleMask.contains(.fullScreen) == true)
+    }
+
+    private func registerWindowObservers() {
+        guard let window else { return }
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(publishFullscreenState),
+            name: NSWindow.didEnterFullScreenNotification,
+            object: window
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(publishFullscreenState),
+            name: NSWindow.didExitFullScreenNotification,
+            object: window
+        )
     }
 }
 
