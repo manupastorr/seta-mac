@@ -234,10 +234,7 @@ struct DraftPane: View {
                                     store.moveDraftTrack(id: draggedId, toIndex: index)
                                 },
                                 onNoteCommit: { store.setDraftNote($0, for: track.id) },
-                                onSelect: {
-                                    store.selectedTrackID = track.id
-                                    store.syncQueueFocus(to: track.id)
-                                }
+                                onSelect: { store.playDraftTrack(track.id) }
                             )
                         }
                     }

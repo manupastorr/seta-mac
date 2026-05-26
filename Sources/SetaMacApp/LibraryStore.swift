@@ -524,6 +524,13 @@ final class LibraryStore: ObservableObject {
         playTrack(id: first.id)
     }
 
+    func playDraftTrack(_ trackId: String) {
+        draftPlayMode = true
+        highlightNeighbors = false
+        syncPlayQueue()
+        playTrackViaView(id: trackId)
+    }
+
     func playRelative(step: Int) {
         syncPlayQueue()
         guard !playQueue.isEmpty else { return }
