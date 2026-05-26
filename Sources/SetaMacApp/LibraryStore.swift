@@ -21,6 +21,7 @@ final class LibraryStore: ObservableObject {
     @Published var errorMessage: String?
     @Published var statusMessage: String?
     @Published var highlightNeighbors = false
+    @Published var neighborQueueAnchor: String?
     @Published var draftPlayMode = false
     @Published var playQueue: [SetaTrack] = []
     @Published var playIndex = -1
@@ -84,7 +85,7 @@ final class LibraryStore: ObservableObject {
     }
 
     var neighborAnchorID: String? {
-        highlightNeighbors ? (playingTrackID ?? selectedTrackID) : nil
+        highlightNeighbors ? (neighborQueueAnchor ?? selectedTrackID) : nil
     }
 
     var neighborResult: Playback.MixNeighborsResult {
@@ -287,7 +288,6 @@ final class LibraryStore: ObservableObject {
             return
         }
         isRescanning = true
-        statusMessage = "Scanning library..."
         Task {
             let result = LibraryScanner.scanLibrary(at: scannerRoot, quick: !fullEdges)
             await MainActor.run {
@@ -343,7 +343,10 @@ final class LibraryStore: ObservableObject {
 
     func toggleNeighborMode() {
         highlightNeighbors.toggle()
-        if highlightNeighbors { draftPlayMode = false }
+        if highlightNeighbors {
+            draftPlayMode = false
+            neighborQueueAnchor = selectedTrackID
+        }
         syncPlayQueue()
     }
 
@@ -373,11 +376,29 @@ final class LibraryStore: ObservableObject {
     }
 
     func setNeighborAnchor(_ trackId: String) {
+        reanchorNeighborQueue(trackId: trackId)
+    }
+
+    func reanchorFromShortcut() {
+        guard mixDockTab != .draft else { return }
+        if canQueueKeyboardNav, let trackId = queueFocusTrackID {
+            reanchorNeighborQueue(trackId: trackId)
+            return
+        }
+        if let selectedTrackID {
+            reanchorNeighborQueue(trackId: selectedTrackID)
+        }
+    }
+
+    func reanchorNeighborQueue(trackId: String) {
+        guard library?.tracks.contains(where: { $0.id == trackId }) == true else { return }
+        neighborQueueAnchor = trackId
         selectedTrackID = trackId
         highlightNeighbors = true
         draftPlayMode = false
         syncPlayQueue()
-        playTrack(id: trackId)
+        playAudio(id: trackId, keepSelection: trackId)
+        queueFocusIndex = 0
     }
 
     func selectDraft(id: String) {
@@ -541,7 +562,12 @@ final class LibraryStore: ObservableObject {
             step: step
         )
         playIndex = nextIndex
-        playTrack(id: playQueue[nextIndex].id)
+        let nextId = playQueue[nextIndex].id
+        if highlightNeighbors, let anchorId = neighborAnchorID {
+            playAudio(id: nextId, keepSelection: anchorId)
+        } else {
+            playTrack(id: nextId)
+        }
     }
 
     func stopPlayback() {
@@ -612,9 +638,30 @@ final class LibraryStore: ObservableObject {
         }
     }
 
-    func playTrackViaView(id: String) {
-        playTrack(id: id)
+    func playTrackViaView(id: String, reanchor: Bool = false) {
+        guard library?.tracks.contains(where: { $0.id == id }) == true else { return }
+        if highlightNeighbors {
+            if reanchor {
+                reanchorNeighborQueue(trackId: id)
+            } else {
+                playInNeighborMode(id: id)
+            }
+        } else {
+            playTrack(id: id)
+        }
         syncQueueFocus(to: id)
+    }
+
+    private func playInNeighborMode(id: String) {
+        if let anchorId = neighborAnchorID {
+            let neighbors = Playback.mixNeighbors(trackId: anchorId, tracks: filteredTracks)
+            if neighbors.ids.contains(id) {
+                syncPlayQueue()
+                playAudio(id: id, keepSelection: anchorId)
+                return
+            }
+        }
+        reanchorNeighborQueue(trackId: id)
     }
 
     func syncQueueFocus(to trackID: String?) {
@@ -691,8 +738,12 @@ final class LibraryStore: ObservableObject {
     }
 
     private func playTrack(id: String) {
+        playAudio(id: id, keepSelection: id)
+    }
+
+    private func playAudio(id: String, keepSelection selectedId: String) {
         guard let track = library?.tracks.first(where: { $0.id == id }) else { return }
-        selectedTrackID = id
+        selectedTrackID = selectedId
         guard Date() >= suppressPlaybackUntil else { return }
         playingTrackID = id
         playIndex = Playback.resolvePlayIndex(queue: playQueue, trackId: id)

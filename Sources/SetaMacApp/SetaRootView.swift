@@ -177,9 +177,14 @@ struct SetaRootView: View {
 
 struct StatusBanner: View {
     @ObservedObject var store: LibraryStore
+    @State private var dismissTask: Task<Void, Never>?
+
+    private var message: String? {
+        store.errorMessage ?? store.statusMessage
+    }
 
     var body: some View {
-        if let message = store.errorMessage ?? store.statusMessage {
+        if let message {
             Text(message)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(store.errorMessage == nil ? SetaTheme.muted : .orange)
@@ -188,15 +193,27 @@ struct StatusBanner: View {
                 .background(.white.opacity(0.92))
                 .background(.ultraThinMaterial, in: Capsule())
                 .overlay { Capsule().strokeBorder(SetaTheme.panelBorder) }
-                .onAppear {
-                    guard store.errorMessage == nil else { return }
-                    Task { @MainActor in
-                        try? await Task.sleep(for: .seconds(2.5))
-                        if store.statusMessage == message {
-                            store.statusMessage = nil
-                        }
-                    }
+                .id(message)
+                .onAppear { scheduleDismiss(for: message) }
+                .onChange(of: message) { _, newMessage in
+                    scheduleDismiss(for: newMessage)
                 }
+                .onDisappear {
+                    dismissTask?.cancel()
+                    dismissTask = nil
+                }
+        }
+    }
+
+    private func scheduleDismiss(for message: String) {
+        guard store.errorMessage == nil else { return }
+        dismissTask?.cancel()
+        dismissTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            if store.errorMessage == nil, store.statusMessage == message {
+                store.statusMessage = nil
+            }
         }
     }
 }
@@ -303,7 +320,12 @@ private struct KeyboardShortcutsModifier: ViewModifier {
                 return .handled
             }
             .onKeyPress(.return) {
-                guard store.canQueueKeyboardNav, canUseGlobalShortcut else { return .ignored }
+                guard canUseGlobalShortcut else { return .ignored }
+                if NSEvent.modifierFlags.contains(.command) {
+                    store.reanchorFromShortcut()
+                    return .handled
+                }
+                guard store.canQueueKeyboardNav else { return .ignored }
                 store.activateQueueFocus()
                 return .handled
             }

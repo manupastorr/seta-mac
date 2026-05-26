@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import SetaMacCore
 
@@ -146,9 +147,8 @@ struct NeighborsPane: View {
                         isPlaying: store.playingTrackID == anchorTrack.id,
                         isInDraft: store.draft.trackIds.contains(anchorTrack.id),
                         isQueueFocus: store.queueFocusTrackID == anchorTrack.id,
-                        onSelect: {
-                            store.selectedTrackID = anchorTrack.id
-                            store.playTrackViaView(id: anchorTrack.id)
+                        onSelect: { reanchor in
+                            store.playTrackViaView(id: anchorTrack.id, reanchor: reanchor)
                         },
                         onAdd: { store.addTrackToDraft(anchorTrack.id) }
                     )
@@ -166,9 +166,8 @@ struct NeighborsPane: View {
                                 isPlaying: store.playingTrackID == track.id,
                                 isInDraft: store.draft.trackIds.contains(track.id),
                                 isQueueFocus: store.queueFocusTrackID == track.id,
-                                onSelect: {
-                                    store.selectedTrackID = track.id
-                                    store.playTrackViaView(id: track.id)
+                                onSelect: { reanchor in
+                                    store.playTrackViaView(id: track.id, reanchor: reanchor)
                                 },
                                 onAdd: { store.addTrackToDraft(track.id) }
                             )
@@ -270,7 +269,7 @@ struct NeighborRow: View {
     let isPlaying: Bool
     let isInDraft: Bool
     var isQueueFocus: Bool = false
-    let onSelect: () -> Void
+    let onSelect: (Bool) -> Void
     let onAdd: () -> Void
 
     @State private var isHovered = false
@@ -285,7 +284,7 @@ struct NeighborRow: View {
     }
 
     var body: some View {
-        Button(action: onSelect) {
+        Button(action: { onSelect(NSEvent.modifierFlags.contains(.command)) }) {
             HStack(alignment: .center, spacing: 5) {
                 Group {
                     if isAnchor {
