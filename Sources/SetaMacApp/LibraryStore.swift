@@ -450,6 +450,17 @@ final class LibraryStore: ObservableObject {
         }
     }
 
+    func moveDraftTrack(id trackId: String, toIndex targetIndex: Int) {
+        var ids = draftTracks.map(\.id)
+        guard let sourceIndex = ids.firstIndex(of: trackId), sourceIndex != targetIndex else { return }
+        ids.move(fromOffsets: IndexSet(integer: sourceIndex), toOffset: targetIndex)
+        draft.reorderTrackIds(ids)
+        deferAfterListUpdate {
+            self.persistDraftSoon()
+            self.syncPlayQueue()
+        }
+    }
+
     func moveDraftTrackUp(_ trackId: String) {
         let ids = draftTracks.map(\.id)
         guard let index = ids.firstIndex(of: trackId), index > 0 else { return }

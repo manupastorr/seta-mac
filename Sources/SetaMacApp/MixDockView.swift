@@ -228,12 +228,11 @@ struct DraftPane: View {
                                 isPlaying: store.playingTrackID == track.id,
                                 isQueueFocus: store.queueFocusTrackID == track.id,
                                 note: store.draft.notes[track.id] ?? "",
-                                canMoveUp: index > 0,
-                                canMoveDown: index < store.draftTracks.count - 1,
                                 onToggleFinal: { store.toggleFinal(track.id) },
                                 onRemove: { store.removeFromDraft(track.id) },
-                                onMoveUp: { store.moveDraftTrackUp(track.id) },
-                                onMoveDown: { store.moveDraftTrackDown(track.id) },
+                                onReorder: { draggedId in
+                                    store.moveDraftTrack(id: draggedId, toIndex: index)
+                                },
                                 onNoteCommit: { store.setDraftNote($0, for: track.id) },
                                 onSelect: {
                                     store.selectedTrackID = track.id
@@ -346,18 +345,16 @@ struct DraftTrackRow: View {
     let isPlaying: Bool
     var isQueueFocus: Bool = false
     let note: String
-    let canMoveUp: Bool
-    let canMoveDown: Bool
     let onToggleFinal: () -> Void
     let onRemove: () -> Void
-    let onMoveUp: () -> Void
-    let onMoveDown: () -> Void
+    let onReorder: (String) -> Void
     let onNoteCommit: (String) -> Void
     var onSelect: () -> Void = {}
 
     @State private var noteText = ""
     @State private var isHovered = false
     @State private var removeHovered = false
+    @State private var isDropTargeted = false
 
     private var rowAppearance: TrackListRowAppearance {
         TrackListRowAppearance(
@@ -376,6 +373,16 @@ struct DraftTrackRow: View {
                     .opacity(isHovered ? 1 : 0.55)
                     .frame(width: 12)
                     .padding(.top, 1)
+                    .contentShape(Rectangle())
+                    .draggable(track.id) {
+                        Text(track.displayTitle)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(SetaTheme.text)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(.ultraThinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    }
 
                 Button(action: onToggleFinal) {
                     Image(systemName: isFinal ? "star.fill" : "star")
@@ -436,6 +443,17 @@ struct DraftTrackRow: View {
             TrackListRowChrome(appearance: rowAppearance)
         }
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay {
+            if isDropTargeted {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(SetaTheme.accent.opacity(0.85), lineWidth: 2)
+            }
+        }
+        .dropDestination(for: String.self) { items, _ in
+            guard let draggedId = items.first, draggedId != track.id else { return false }
+            onReorder(draggedId)
+            return true
+        } isTargeted: { isDropTargeted = $0 }
         .onHover { isHovered = $0 }
     }
 }
