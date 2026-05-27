@@ -341,9 +341,19 @@ func uiGeometryChecks() throws {
     """
     let library = try SetaLibrary.decode(from: Data(json.utf8))
     let track = library.tracks[0]
-    let pointA = layout.trackPoint(for: track, jitter: true)
-    let pointB = layout.trackPoint(for: track, jitter: true)
-    check(pointA == pointB, "stable jitter is deterministic")
+    let resolved = layout.resolveDisplayPositions(for: library.tracks)
+    let pointA = layout.trackPoint(for: track, displayPositions: resolved)
+    let pointB = layout.trackPoint(for: track, displayPositions: resolved)
+    check(pointA == pointB, "display layout is deterministic")
+
+    if library.tracks.count >= 2 {
+        let t1 = library.tracks[0]
+        let t2 = library.tracks[1]
+        let p1 = layout.trackPoint(for: t1, displayPositions: resolved)
+        let p2 = layout.trackPoint(for: t2, displayPositions: resolved)
+        let minSep = TrackPresentation.nodeRadius(for: t1) + TrackPresentation.nodeRadius(for: t2) + 0.5
+        check(hypot(p1.x - p2.x, p1.y - p2.y) >= minSep, "collision layout separates nearby tracks")
+    }
 
     let segments = CamelotWheelGeometry.segments()
     check(segments.count == 24, "camelot wheel has 24 segments")

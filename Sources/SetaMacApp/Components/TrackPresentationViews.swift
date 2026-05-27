@@ -179,6 +179,7 @@ struct MapLoupeView: View {
     let track: SetaTrack
     let layout: MapPlotLayout
     let tracks: [SetaTrack]
+    var displayPositions: [String: CGPoint]? = nil
     let neighborIDs: Set<String>
     let playingID: String?
 
@@ -191,11 +192,11 @@ struct MapLoupeView: View {
             context.fill(Path(ellipseIn: CGRect(origin: .zero, size: size)), with: .color(.white))
             context.stroke(Path(ellipseIn: CGRect(origin: .zero, size: size)), with: .color(SetaTheme.panelBorder), lineWidth: 1)
 
-            let anchor = layout.trackPoint(for: track, jitter: true)
+            let anchor = layout.trackPoint(for: track, displayPositions: displayPositions)
             let sourceRadius: CGFloat = 56
 
             for item in tracks {
-                let point = layout.trackPoint(for: item, jitter: true)
+                let point = layout.trackPoint(for: item, displayPositions: displayPositions)
                 let dx = point.x - anchor.x
                 let dy = point.y - anchor.y
                 guard hypot(dx, dy) <= sourceRadius else { continue }

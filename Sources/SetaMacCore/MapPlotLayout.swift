@@ -116,7 +116,13 @@ public struct MapPlotLayout: Equatable, Sendable {
         return yMax - CGFloat(ratio) * (yMax - yMin)
     }
 
-    public func trackPoint(for track: SetaTrack, jitter: Bool = true) -> CGPoint {
+    public enum DisplayLayout {
+        public static let collisionIterations = 22
+        public static let maxDisplacement: CGFloat = 24
+        public static let separationPadding: CGFloat = 1.25
+    }
+
+    public func anchorPoint(for track: SetaTrack) -> CGPoint {
         let cx: CGFloat
         if let bpm = track.bpm {
             cx = bpmX(bpm)
@@ -125,14 +131,109 @@ public struct MapPlotLayout: Equatable, Sendable {
             cx = bpmX(mid)
         }
         let cy = energyY(track.effectiveEnergy)
-        var px = cx
-        var py = cy
-        if jitter {
-            let (jx, jy) = MapPlotLayout.stableJitter(id: track.id)
-            px += jx
-            py += jy
+        return boundToPlot(x: cx, y: cy, id: track.id)
+    }
+
+    /// Plot position for drawing and hit-testing. Uses collision-resolved layout when provided.
+    public func trackPoint(for track: SetaTrack, displayPositions: [String: CGPoint]? = nil) -> CGPoint {
+        if let resolved = displayPositions?[track.id] {
+            return resolved
         }
-        return boundToPlot(x: px, y: py, id: track.id)
+        return anchorPoint(for: track)
+    }
+
+    @available(*, deprecated, message: "Use trackPoint(for:displayPositions:) with resolveDisplayPositions")
+    public func trackPoint(for track: SetaTrack, jitter: Bool) -> CGPoint {
+        if jitter {
+            let anchor = anchorPoint(for: track)
+            let (jx, jy) = MapPlotLayout.stableJitter(id: track.id)
+            return boundToPlot(x: anchor.x + jx, y: anchor.y + jy, id: track.id)
+        }
+        return anchorPoint(for: track)
+    }
+
+    public func resolveDisplayPositions(for tracks: [SetaTrack]) -> [String: CGPoint] {
+        struct Node {
+            let id: String
+            let anchor: CGPoint
+            let radius: CGFloat
+        }
+
+        var nodes: [Node] = []
+        nodes.reserveCapacity(tracks.count)
+        for track in tracks {
+            guard track.bpm != nil else { continue }
+            nodes.append(
+                Node(
+                    id: track.id,
+                    anchor: anchorPoint(for: track),
+                    radius: TrackPresentation.nodeRadius(for: track)
+                )
+            )
+        }
+
+        guard !nodes.isEmpty else { return [:] }
+
+        var positions = Dictionary(uniqueKeysWithValues: nodes.map { ($0.id, $0.anchor) })
+        let maxDisp = DisplayLayout.maxDisplacement
+        let pad = DisplayLayout.separationPadding
+
+        for _ in 0 ..< DisplayLayout.collisionIterations {
+            for i in 0 ..< nodes.count {
+                for j in (i + 1) ..< nodes.count {
+                    let nodeA = nodes[i]
+                    let nodeB = nodes[j]
+                    var a = positions[nodeA.id]!
+                    var b = positions[nodeB.id]!
+                    let minSep = nodeA.radius + nodeB.radius + pad
+                    var dx = b.x - a.x
+                    var dy = b.y - a.y
+                    var dist = hypot(dx, dy)
+                    if dist < 0.001 {
+                        dist = 0.001
+                        dx = 0.001
+                        dy = 0
+                    }
+                    guard dist < minSep else { continue }
+                    let push = (minSep - dist) / 2
+                    let nx = dx / dist
+                    let ny = dy / dist
+                    a.x -= nx * push
+                    a.y -= ny * push
+                    b.x += nx * push
+                    b.y += ny * push
+                    positions[nodeA.id] = capDisplacement(
+                        point: a,
+                        anchor: nodeA.anchor,
+                        max: maxDisp,
+                        id: nodeA.id
+                    )
+                    positions[nodeB.id] = capDisplacement(
+                        point: b,
+                        anchor: nodeB.anchor,
+                        max: maxDisp,
+                        id: nodeB.id
+                    )
+                }
+            }
+        }
+
+        return positions
+    }
+
+    private func capDisplacement(point: CGPoint, anchor: CGPoint, max: CGFloat, id: String) -> CGPoint {
+        let dx = point.x - anchor.x
+        let dy = point.y - anchor.y
+        let distance = hypot(dx, dy)
+        if distance <= max {
+            return boundToPlot(x: point.x, y: point.y, id: id)
+        }
+        let scale = max / distance
+        return boundToPlot(
+            x: anchor.x + dx * scale,
+            y: anchor.y + dy * scale,
+            id: id
+        )
     }
 
     public func momentEllipse(_ moment: SetMoment) -> (cx: CGFloat, cy: CGFloat, rx: CGFloat, ry: CGFloat) {
@@ -156,27 +257,46 @@ public struct MapPlotLayout: Equatable, Sendable {
         CGPoint(x: plotLeft, y: MapPlotMetrics.Margin.top)
     }
 
-    public func canvasPoint(for track: SetaTrack, jitter: Bool = true) -> CGPoint {
-        let local = trackPoint(for: track, jitter: jitter)
+    public func canvasPoint(
+        for track: SetaTrack,
+        displayPositions: [String: CGPoint]? = nil
+    ) -> CGPoint {
+        let local = trackPoint(for: track, displayPositions: displayPositions)
         let origin = plotOrigin(in: CGSize(width: canvasWidth, height: canvasHeight))
         return CGPoint(x: origin.x + local.x, y: origin.y + local.y)
+    }
+
+    public func tracksNear(
+        to location: CGPoint,
+        tracks: [SetaTrack],
+        pickRadius: CGFloat = 10,
+        displayPositions: [String: CGPoint]? = nil
+    ) -> [SetaTrack] {
+        let origin = plotOrigin(in: CGSize(width: canvasWidth, height: canvasHeight))
+        let local = CGPoint(x: location.x - origin.x, y: location.y - origin.y)
+        return tracks
+            .compactMap { track -> (SetaTrack, CGFloat)? in
+                let point = trackPoint(for: track, displayPositions: displayPositions)
+                let distance = hypot(point.x - local.x, point.y - local.y)
+                guard distance <= pickRadius else { return nil }
+                return (track, distance)
+            }
+            .sorted { $0.1 < $1.1 }
+            .map(\.0)
     }
 
     public func nearestTrack(
         to location: CGPoint,
         tracks: [SetaTrack],
-        pickRadius: CGFloat = 10
+        pickRadius: CGFloat = 10,
+        displayPositions: [String: CGPoint]? = nil
     ) -> SetaTrack? {
-        let origin = plotOrigin(in: CGSize(width: canvasWidth, height: canvasHeight))
-        let local = CGPoint(x: location.x - origin.x, y: location.y - origin.y)
-        return tracks
-            .compactMap { track -> (SetaTrack, CGFloat)? in
-                let point = trackPoint(for: track, jitter: true)
-                return (track, hypot(point.x - local.x, point.y - local.y))
-            }
-            .filter { $0.1 <= pickRadius }
-            .min { $0.1 < $1.1 }?
-            .0
+        tracksNear(
+            to: location,
+            tracks: tracks,
+            pickRadius: pickRadius,
+            displayPositions: displayPositions
+        ).first
     }
 
     public static func stableJitter(id: String, ampX: CGFloat = 28, ampY: CGFloat = 18) -> (CGFloat, CGFloat) {
