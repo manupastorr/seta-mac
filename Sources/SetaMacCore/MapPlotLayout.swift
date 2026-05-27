@@ -6,7 +6,7 @@ public enum MapPlotMetrics {
     public static let energyDomain: ClosedRange<Double> = 0 ... 1
 
     public enum Margin {
-        public static let top: CGFloat = 44
+        public static let top: CGFloat = 12
         public static let right: CGFloat = 36
         public static let bottom: CGFloat = 56
         public static let left: CGFloat = 64
@@ -15,7 +15,7 @@ public enum MapPlotMetrics {
     public enum Inset {
         public static let left: CGFloat = 52
         public static let right: CGFloat = 36
-        public static let top: CGFloat = 52
+        public static let top: CGFloat = 32
         public static let bottom: CGFloat = 58
     }
 }
@@ -24,6 +24,7 @@ public enum EnergyDisplay {
     public static let floor = 0.15
     public static let minSpan = 0.4
     public static let percentileLo = 3.0
+    public static let percentileHi = 97.0
     public static let padRatio = 0.08
     public static let top = 1.0
     public static let fallback: ClosedRange<Double> = 0.2 ... 1.0
@@ -35,22 +36,29 @@ public struct MapPlotLayout: Equatable, Sendable {
     public let plotLeft: CGFloat
     public let plotWidth: CGFloat
     public let plotHeight: CGFloat
+    public let topChrome: CGFloat
     public let energyDomain: ClosedRange<Double>
 
     public init(
         canvasSize: CGSize,
         mixDockWidth: CGFloat = 0,
         rightChrome: CGFloat = 0,
+        topChrome: CGFloat = 0,
         bottomChrome: CGFloat = 82,
         energyDomain: ClosedRange<Double> = MapPlotMetrics.energyDomain
     ) {
         canvasWidth = canvasSize.width
         canvasHeight = max(canvasSize.height, 200)
+        self.topChrome = topChrome
         plotLeft = mixDockWidth + MapPlotMetrics.Margin.left
         plotWidth = max(120, canvasWidth - plotLeft - MapPlotMetrics.Margin.right - rightChrome)
         plotHeight = max(
             120,
-            canvasHeight - MapPlotMetrics.Margin.top - MapPlotMetrics.Margin.bottom - bottomChrome
+            canvasHeight
+                - topChrome
+                - MapPlotMetrics.Margin.top
+                - MapPlotMetrics.Margin.bottom
+                - bottomChrome
         )
         self.energyDomain = energyDomain
     }
@@ -60,19 +68,20 @@ public struct MapPlotLayout: Equatable, Sendable {
         guard energies.count >= 2 else { return EnergyDisplay.fallback }
 
         let sorted = energies.sorted()
-        let hi = EnergyDisplay.top
-        let pHi = energyPercentile(sorted, percentile: 97)
+        let pHi = energyPercentile(sorted, percentile: EnergyDisplay.percentileHi)
         var lo = energyPercentile(sorted, percentile: EnergyDisplay.percentileLo)
         let pad = max(0.02, (pHi - lo) * EnergyDisplay.padRatio)
         lo = max(EnergyDisplay.floor, lo - pad)
+        var hi = min(EnergyDisplay.top, pHi + pad)
 
-        var lower = lo
-        if hi - lower < EnergyDisplay.minSpan {
-            lower = max(EnergyDisplay.floor, hi - EnergyDisplay.minSpan)
+        if hi - lo < EnergyDisplay.minSpan {
+            hi = min(EnergyDisplay.top, lo + EnergyDisplay.minSpan)
+            lo = max(EnergyDisplay.floor, hi - EnergyDisplay.minSpan)
         }
 
-        let roundedLo = (lower * 1000).rounded() / 1000
-        return roundedLo ... hi
+        let roundedLo = (lo * 1000).rounded() / 1000
+        let roundedHi = (hi * 1000).rounded() / 1000
+        return roundedLo ... roundedHi
     }
 
     public static func energyPercentile(_ sorted: [Double], percentile: Double) -> Double {
@@ -88,7 +97,7 @@ public struct MapPlotLayout: Equatable, Sendable {
         let lo = energyDomain.lowerBound
         let hi = energyDomain.upperBound
         let mid = (lo + hi) / 2
-        let values = [lo, mid, hi, EnergyDisplay.top]
+        let values = [lo, mid, hi]
             .map { ($0 * 100).rounded() / 100 }
         return Array(Set(values)).sorted()
     }
@@ -254,7 +263,7 @@ public struct MapPlotLayout: Equatable, Sendable {
     }
 
     public func plotOrigin(in canvas: CGSize) -> CGPoint {
-        CGPoint(x: plotLeft, y: MapPlotMetrics.Margin.top)
+        CGPoint(x: plotLeft, y: topChrome + MapPlotMetrics.Margin.top)
     }
 
     public func canvasPoint(

@@ -17,6 +17,7 @@ struct TrackMapView: View {
     var energyDomain: ClosedRange<Double> = MapPlotMetrics.energyDomain
     var mixDockWidth: CGFloat = 0
     var rightChrome: CGFloat = 0
+    var topChrome: CGFloat = SetaTheme.filterBarHeight + 6
     var bottomChrome: CGFloat = SetaTheme.playerHeight + 10
     var resetTrigger: UUID = UUID()
     var trackOverrides: [String: TrackOverride] = [:]
@@ -42,6 +43,7 @@ struct TrackMapView: View {
                 canvasSize: proxy.size,
                 mixDockWidth: mixDockWidth,
                 rightChrome: rightChrome,
+                topChrome: topChrome,
                 bottomChrome: bottomChrome,
                 energyDomain: energyDomain
             )

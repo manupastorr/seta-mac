@@ -373,7 +373,17 @@ func uiGeometryChecks() throws {
     )
 
     let domain = MapPlotLayout.computeEnergyDisplayDomain(tracks: library.tracks)
-    check(domain.upperBound == 1, "energy display domain top")
+    check(domain.upperBound < 1, "energy display domain caps below full scale for small library")
+    check(domain.upperBound >= 0.75, "energy display domain includes top track energy")
+
+    let withTopChrome = MapPlotLayout(
+        canvasSize: CGSize(width: 1200, height: 800),
+        topChrome: 74,
+        bottomChrome: 82
+    )
+    let withoutTopChrome = MapPlotLayout(canvasSize: CGSize(width: 1200, height: 800), bottomChrome: 82)
+    check(withTopChrome.plotHeight < withoutTopChrome.plotHeight, "top chrome shrinks plot height")
+    check(withTopChrome.plotOrigin(in: CGSize(width: 1200, height: 800)).y > withoutTopChrome.plotOrigin(in: CGSize(width: 1200, height: 800)).y, "top chrome lowers plot origin")
 }
 
 func smokeRealLibrary() throws {
