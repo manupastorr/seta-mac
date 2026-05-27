@@ -452,9 +452,19 @@ struct DraftTrackRow: View {
     var onSelect: () -> Void = {}
 
     @State private var noteText = ""
+    @State private var isEditingNote = false
     @State private var isHovered = false
     @State private var removeHovered = false
     @State private var isDropTargeted = false
+    @FocusState private var noteFieldFocused: Bool
+
+    private var hasNoteContent: Bool {
+        !noteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var showsNoteField: Bool {
+        hasNoteContent || isEditingNote
+    }
 
     private var rowAppearance: TrackListRowAppearance {
         TrackListRowAppearance(
@@ -512,6 +522,20 @@ struct DraftTrackRow: View {
                 .buttonStyle(.plain)
                 .frame(minWidth: 0, maxWidth: .infinity)
 
+                if !showsNoteField {
+                    Button {
+                        isEditingNote = true
+                        noteFieldFocused = true
+                    } label: {
+                        Image(systemName: "note.text")
+                            .font(.system(size: 11))
+                            .foregroundStyle(SetaTheme.muted.opacity(isHovered ? 0.85 : 0.5))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Add note")
+                    .padding(.top, 1)
+                }
+
                 Button(action: onRemove) {
                     Text("×")
                         .font(.system(size: 14))
@@ -522,21 +546,26 @@ struct DraftTrackRow: View {
                 .onHover { removeHovered = $0 }
             }
 
-            TextField("Note…", text: $noteText)
-                .textFieldStyle(.plain)
-                .font(.system(size: 10))
-                .foregroundStyle(SetaTheme.text)
-                .tint(SetaTheme.accent)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 4)
-                .background(Color.white.opacity(0.9))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .strokeBorder(SetaTheme.panelBorder)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                .onSubmit { onNoteCommit(noteText) }
-                .onAppear { if noteText.isEmpty { noteText = note } }
+            if showsNoteField {
+                TextField("Note…", text: $noteText)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 10))
+                    .foregroundStyle(SetaTheme.text)
+                    .tint(SetaTheme.accent)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+                    .background(Color.white.opacity(0.9))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .strokeBorder(SetaTheme.panelBorder)
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .focused($noteFieldFocused)
+                    .onSubmit { commitNote() }
+                    .onChange(of: noteFieldFocused) { _, focused in
+                        if !focused { commitNote() }
+                    }
+            }
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 6)
@@ -556,6 +585,22 @@ struct DraftTrackRow: View {
             return true
         } isTargeted: { isDropTargeted = $0 }
         .onHover { isHovered = $0 }
+        .onAppear {
+            if noteText.isEmpty { noteText = note }
+        }
+        .onChange(of: note) { _, newValue in
+            noteText = newValue
+            if newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                isEditingNote = false
+            }
+        }
+    }
+
+    private func commitNote() {
+        onNoteCommit(noteText)
+        if !hasNoteContent {
+            isEditingNote = false
+        }
     }
 }
 
