@@ -1,6 +1,28 @@
 import SwiftUI
 import SetaMacCore
 
+struct CamelotKeyChip: View {
+    let code: String
+    var manual: Bool = false
+
+    private var fillHex: String {
+        Camelot.colorHex(Camelot.isKnownCode(code) ? code : nil)
+    }
+
+    var body: some View {
+        Text(manual ? "\(code) M" : code)
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundStyle(SetaTheme.text)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color(hex: fillHex + "1a"))
+            .overlay {
+                Capsule().strokeBorder(Color(hex: fillHex + "44"))
+            }
+            .clipShape(Capsule())
+    }
+}
+
 struct TrackBadgesView: View {
     let badges: [TrackPresentation.Badge]
 

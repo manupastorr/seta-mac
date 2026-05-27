@@ -113,24 +113,40 @@ struct ManualTrackControls: View {
 
                 ManualOverrideRow(
                     title: "Key",
-                    valueText: track.key ?? "?",
                     isManual: store.trackOverride(for: track.id)?.key != nil,
                     onAuto: { store.clearManualKey(for: track.id) }
                 ) {
-                    Picker("Key", selection: Binding(
-                        get: {
-                            track.key.flatMap { Camelot.isKnownCode($0) ? $0.uppercased() : nil }
-                                ?? Camelot.orderedCodes.first!
-                        },
-                        set: { store.setManualKey($0, for: track.id) }
-                    )) {
+                    CamelotKeyChip(
+                        code: track.key ?? "?",
+                        manual: store.trackOverride(for: track.id)?.key != nil
+                    )
+                } control: {
+                    let selectedCode = track.key.flatMap { Camelot.isKnownCode($0) ? $0.uppercased() : nil }
+                        ?? Camelot.orderedCodes[0]
+                    Menu {
                         ForEach(Camelot.orderedCodes, id: \.self) { code in
-                            Text(code).tag(code)
+                            Button {
+                                store.setManualKey(code, for: track.id)
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Circle()
+                                        .fill(Color(hex: Camelot.colorHex(code)))
+                                        .frame(width: 8, height: 8)
+                                    Text(code)
+                                }
+                            }
                         }
+                    } label: {
+                        HStack(spacing: 6) {
+                            CamelotKeyChip(code: selectedCode)
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(SetaTheme.muted)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .menuStyle(.borderlessButton)
                 }
 
                 ManualOverrideRow(
@@ -161,11 +177,11 @@ struct ManualTrackControls: View {
     }
 }
 
-private struct ManualOverrideRow<Control: View>: View {
+private struct ManualOverrideRow<ValueView: View, Control: View>: View {
     let title: String
-    let valueText: String
     let isManual: Bool
     let onAuto: () -> Void
+    @ViewBuilder var valueView: () -> ValueView
     @ViewBuilder var control: () -> Control
 
     var body: some View {
@@ -175,9 +191,7 @@ private struct ManualOverrideRow<Control: View>: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(SetaTheme.muted)
                 Spacer()
-                Text(valueText)
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(SetaTheme.text)
+                valueView()
                 Button("Auto") { onAuto() }
                     .font(.system(size: 9, weight: .semibold))
                     .buttonStyle(.plain)
@@ -186,6 +200,26 @@ private struct ManualOverrideRow<Control: View>: View {
             }
             control()
         }
+    }
+}
+
+private extension ManualOverrideRow where ValueView == Text {
+    init(
+        title: String,
+        valueText: String,
+        isManual: Bool,
+        onAuto: @escaping () -> Void,
+        @ViewBuilder control: @escaping () -> Control
+    ) {
+        self.title = title
+        self.isManual = isManual
+        self.onAuto = onAuto
+        self.valueView = {
+            Text(valueText)
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .foregroundStyle(SetaTheme.text)
+        }
+        self.control = control
     }
 }
 
