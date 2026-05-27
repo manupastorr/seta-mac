@@ -6,7 +6,7 @@ public enum MapPlotMetrics {
     public static let energyDomain: ClosedRange<Double> = 0 ... 1
 
     public enum Margin {
-        public static let top: CGFloat = 12
+        public static let top: CGFloat = 8
         public static let right: CGFloat = 36
         public static let bottom: CGFloat = 56
         public static let left: CGFloat = 64
@@ -15,14 +15,14 @@ public enum MapPlotMetrics {
     public enum Inset {
         public static let left: CGFloat = 52
         public static let right: CGFloat = 36
-        public static let top: CGFloat = 32
+        public static let top: CGFloat = 18
         public static let bottom: CGFloat = 58
     }
 }
 
 public enum EnergyDisplay {
     public static let floor = 0.15
-    public static let minSpan = 0.4
+    public static let minSpan = 0.32
     public static let percentileLo = 3.0
     public static let percentileHi = 97.0
     public static let padRatio = 0.08
@@ -73,12 +73,21 @@ public struct MapPlotLayout: Equatable, Sendable {
         var lo = energyPercentile(sorted, percentile: EnergyDisplay.percentileLo)
         let pad = max(0.02, (pHi - lo) * EnergyDisplay.padRatio)
         lo = max(EnergyDisplay.floor, lo - pad)
-        // Cap the top at real library data so the plot does not reserve empty space up to 1.0.
-        var hi = min(EnergyDisplay.top, max(maxEnergy, pHi) + pad)
+        // Large libraries can have one or two outliers that waste the top of the map.
+        let upperAnchor = sorted.count >= 24 ? pHi : maxEnergy
+        var hi = min(EnergyDisplay.top, upperAnchor + pad)
 
         if hi - lo < EnergyDisplay.minSpan {
-            hi = min(EnergyDisplay.top, lo + EnergyDisplay.minSpan)
-            lo = max(EnergyDisplay.floor, hi - EnergyDisplay.minSpan)
+            let extra = (EnergyDisplay.minSpan - (hi - lo)) / 2
+            lo = max(EnergyDisplay.floor, lo - extra)
+            hi = min(EnergyDisplay.top, hi + extra)
+            if hi - lo < EnergyDisplay.minSpan {
+                if lo <= EnergyDisplay.floor {
+                    hi = min(EnergyDisplay.top, lo + EnergyDisplay.minSpan)
+                } else {
+                    lo = max(EnergyDisplay.floor, hi - EnergyDisplay.minSpan)
+                }
+            }
         }
 
         let roundedLo = (lo * 1000).rounded() / 1000

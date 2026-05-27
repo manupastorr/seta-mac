@@ -376,6 +376,36 @@ func uiGeometryChecks() throws {
     check(domain.upperBound < 1, "energy display domain caps below full scale for small library")
     check(domain.upperBound >= 0.75, "energy display domain includes top track energy")
 
+    let clusteredEnergyJSON = """
+    {
+      "track_count": 3,
+      "tracks": [
+        { "id": "warm", "path": "/warm.wav", "artist": "A", "title": "Warm", "source": "tracks", "bpm": 118, "energy": 0.68, "key": "7A" },
+        { "id": "drive", "path": "/drive.wav", "artist": "B", "title": "Drive", "source": "tracks", "bpm": 124, "energy": 0.76, "key": "8A" },
+        { "id": "peak", "path": "/peak.wav", "artist": "C", "title": "Peak", "source": "tracks", "bpm": 130, "energy": 0.88, "key": "9A" }
+      ],
+      "edges": []
+    }
+    """
+    let clusteredLibrary = try SetaLibrary.decode(from: Data(clusteredEnergyJSON.utf8))
+    let clusteredDomain = MapPlotLayout.computeEnergyDisplayDomain(tracks: clusteredLibrary.tracks)
+    check(clusteredDomain.upperBound <= 0.95, "clustered energy domain does not waste top space")
+
+    let outlierTracks = (0 ..< 30).map { index in
+        let energy = index == 29 ? 1.0 : 0.72 + Double(index % 8) * 0.015
+        return String(
+            format: #"{"id":"o%d","path":"/o%d.wav","source":"tracks","bpm":%d,"energy":%.3f}"#,
+            index,
+            index,
+            110 + index,
+            energy
+        )
+    }.joined(separator: ",")
+    let outlierJSON = #"{"track_count":30,"tracks":[\#(outlierTracks)],"edges":[]}"#
+    let outlierLibrary = try SetaLibrary.decode(from: Data(outlierJSON.utf8))
+    let outlierDomain = MapPlotLayout.computeEnergyDisplayDomain(tracks: outlierLibrary.tracks)
+    check(outlierDomain.upperBound < 0.95, "large library ignores sparse top-energy outliers")
+
     let withTopChrome = MapPlotLayout(
         canvasSize: CGSize(width: 1200, height: 800),
         topChrome: 74,
