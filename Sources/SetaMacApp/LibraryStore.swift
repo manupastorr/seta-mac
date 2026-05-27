@@ -57,6 +57,20 @@ final class LibraryStore: ObservableObject {
     private var smartNeighborCacheSignature = ""
     private var smartNeighborCache: [SmartNeighbor] = []
     private var smartNeighborRevision = 0
+    private var libraryRevision = 0
+    private var tracksByIDCacheRevision = -1
+    private var tracksByIDCache: [String: SetaTrack] = [:]
+    private var filteredTracksCacheKey: FilteredTracksCacheKey?
+    private var filteredTracksCache: [SetaTrack] = []
+    private var filteredTracksIDSignature = ""
+    private var energyDomainCacheKey = ""
+    private var energyDomainCache: ClosedRange<Double> = EnergyDisplay.fallback
+
+    private struct FilteredTracksCacheKey: Equatable {
+        let libraryRevision: Int
+        let filter: LibraryFilter
+        let draftTrackIDs: [String]
+    }
 
     init() {
         restoreDraft()
@@ -79,18 +93,36 @@ final class LibraryStore: ObservableObject {
     }
 
     var selectedTrack: SetaTrack? {
-        library?.tracks.first { $0.id == selectedTrackID }
+        selectedTrackID.flatMap { tracksByID[$0] }
     }
 
     var tracksByID: [String: SetaTrack] {
-        Dictionary(uniqueKeysWithValues: (library?.tracks ?? []).map { ($0.id, $0) })
+        if tracksByIDCacheRevision == libraryRevision {
+            return tracksByIDCache
+        }
+        let lookup = Dictionary(uniqueKeysWithValues: (library?.tracks ?? []).map { ($0.id, $0) })
+        tracksByIDCacheRevision = libraryRevision
+        tracksByIDCache = lookup
+        return lookup
     }
 
     var filteredTracks: [SetaTrack] {
-        library?.filteredTracks(
+        let key = FilteredTracksCacheKey(
+            libraryRevision: libraryRevision,
+            filter: filter,
+            draftTrackIDs: draft.trackIds
+        )
+        if filteredTracksCacheKey == key {
+            return filteredTracksCache
+        }
+        let tracks = library?.filteredTracks(
             using: filter,
             draftTrackIds: Set(draft.trackIds)
         ) ?? []
+        filteredTracksCacheKey = key
+        filteredTracksCache = tracks
+        filteredTracksIDSignature = tracks.map(\.id).joined(separator: "|")
+        return tracks
     }
 
     var draftTracks: [SetaTrack] {
@@ -146,7 +178,15 @@ final class LibraryStore: ObservableObject {
     }
 
     var energyDisplayDomain: ClosedRange<Double> {
-        MapPlotLayout.computeEnergyDisplayDomain(tracks: filteredTracks)
+        let tracks = filteredTracks
+        let cacheKey = "\(libraryRevision)|\(filteredTracksIDSignature)"
+        if energyDomainCacheKey == cacheKey {
+            return energyDomainCache
+        }
+        let domain = MapPlotLayout.computeEnergyDisplayDomain(tracks: tracks)
+        energyDomainCacheKey = cacheKey
+        energyDomainCache = domain
+        return domain
     }
 
     var draftTrackIDSet: Set<String> { Set(draft.trackIds) }
@@ -193,7 +233,7 @@ final class LibraryStore: ObservableObject {
 
     func smartNeighbors(for anchor: String) -> [SmartNeighbor] {
         let tracks = filteredTracks
-        let signature = smartNeighborSignature(anchor: anchor, tracks: tracks)
+        let signature = smartNeighborSignature(anchor: anchor)
         if smartNeighborCacheAnchor == anchor, smartNeighborCacheSignature == signature {
             return smartNeighborCache
         }
@@ -209,10 +249,9 @@ final class LibraryStore: ObservableObject {
         return neighbors
     }
 
-    private func smartNeighborSignature(anchor: String, tracks: [SetaTrack]) -> String {
+    private func smartNeighborSignature(anchor: String) -> String {
         let feedbackRevision = transitionFeedback.values.map(\.updatedAt).max() ?? 0
-        let filteredIDs = tracks.map(\.id).joined(separator: "|")
-        return "\(smartNeighborRevision)|\(anchor)|\(feedbackRevision)|\(transitionFeedback.count)|\(filteredIDs)"
+        return "\(smartNeighborRevision)|\(anchor)|\(feedbackRevision)|\(transitionFeedback.count)|\(filteredTracksIDSignature)"
     }
 
     private func invalidateSmartNeighborCache() {
@@ -220,6 +259,18 @@ final class LibraryStore: ObservableObject {
         smartNeighborCacheAnchor = nil
         smartNeighborCacheSignature = ""
         smartNeighborCache = []
+    }
+
+    private func invalidateLibraryDerivedCaches() {
+        libraryRevision += 1
+        tracksByIDCacheRevision = -1
+        tracksByIDCache = [:]
+        filteredTracksCacheKey = nil
+        filteredTracksCache = []
+        filteredTracksIDSignature = ""
+        energyDomainCacheKey = ""
+        energyDomainCache = EnergyDisplay.fallback
+        invalidateSmartNeighborCache()
     }
 
     var availableKeys: [String] {
@@ -285,7 +336,7 @@ final class LibraryStore: ObservableObject {
             deferAfterListUpdate {
                 self.library = libraryWithOverrides
                 self.issues = decodedIssues
-                self.invalidateSmartNeighborCache()
+                self.invalidateLibraryDerivedCaches()
                 self.player.stop()
                 self.playingTrackID = nil
                 self.suppressPlaybackUntil = Date().addingTimeInterval(1.0)
@@ -351,14 +402,14 @@ final class LibraryStore: ObservableObject {
     private func applyTrackOverridesToCurrentLibrary() {
         guard let baseLibrary else { return }
         library = displayedLibrary(from: baseLibrary)
-        invalidateSmartNeighborCache()
+        invalidateLibraryDerivedCaches()
     }
 
     private func refreshDisplayedLibrary() {
         guard let baseLibrary else { return }
         library = displayedLibrary(from: baseLibrary)
         issues = library?.validationIssues() ?? []
-        invalidateSmartNeighborCache()
+        invalidateLibraryDerivedCaches()
         syncPlayQueue()
     }
 
