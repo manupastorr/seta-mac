@@ -219,43 +219,40 @@ struct SetaSheetLayout<Content: View, Footer: View>: View {
     let title: String
     var subtitle: String?
     var width: CGFloat = 540
-    var maxContentHeight: CGFloat = 380
     @ViewBuilder var content: () -> Content
     @ViewBuilder var footer: () -> Footer
 
     var body: some View {
         VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(SetaTheme.text)
                 if let subtitle {
                     Text(subtitle)
-                        .font(.system(size: 12))
+                        .font(.system(size: 11))
                         .foregroundStyle(SetaTheme.muted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
-            .padding(.bottom, 14)
+            .padding(.horizontal, 18)
+            .padding(.top, 16)
+            .padding(.bottom, 10)
 
             Divider().opacity(0.65)
 
-            ScrollView {
-                content()
-                    .padding(20)
-            }
-            .frame(maxHeight: maxContentHeight)
+            content()
+                .padding(18)
 
             Divider().opacity(0.65)
 
             footer()
-                .padding(.horizontal, 20)
-                .padding(.vertical, 14)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 12)
         }
         .frame(width: width)
+        .fixedSize(horizontal: false, vertical: true)
         .background(SetaTheme.background)
     }
 }
@@ -263,40 +260,45 @@ struct SetaSheetLayout<Content: View, Footer: View>: View {
 struct SetaSheetSectionCard<Content: View>: View {
     let icon: String
     let title: String
-    let subtitle: String
+    var subtitle: String?
+    var compact: Bool = false
     @ViewBuilder var content: () -> Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 10) {
+        VStack(alignment: .leading, spacing: compact ? 6 : 10) {
+            HStack(alignment: .center, spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(SetaTheme.accent)
-                    .frame(width: 28, height: 28)
+                    .frame(width: compact ? 24 : 28, height: compact ? 24 : 28)
                     .background(SetaTheme.accentSoft)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 1) {
                     Text(title)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(SetaTheme.text)
-                    Text(subtitle)
-                        .font(.system(size: 11))
-                        .foregroundStyle(SetaTheme.muted)
-                        .fixedSize(horizontal: false, vertical: true)
+                    if let subtitle, !compact {
+                        Text(subtitle)
+                            .font(.system(size: 10))
+                            .foregroundStyle(SetaTheme.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 Spacer(minLength: 0)
             }
+            .help(subtitle ?? "")
 
             content()
         }
-        .padding(12)
+        .padding(compact ? 10 : 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(SetaTheme.panel)
         .overlay {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .strokeBorder(SetaTheme.panelBorder.opacity(0.9))
         }
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }
 

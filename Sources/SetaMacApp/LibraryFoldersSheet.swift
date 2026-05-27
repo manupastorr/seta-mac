@@ -9,31 +9,31 @@ struct LibraryFoldersSheet: View {
     var body: some View {
         SetaSheetLayout(
             title: "Library folders",
-            subtitle: "Choose where Seta scans for music. Subfolders are included. Removing a folder or hiding a track never deletes files on disk.",
-            maxContentHeight: 400
+            subtitle: "Recursive scan. Removing folders or hiding tracks never deletes files on disk.",
+            width: 620
         ) {
-            VStack(alignment: .leading, spacing: 14) {
-                folderSourceCard(
-                    icon: "music.note.list",
-                    title: "Library",
-                    subtitle: "Approved tracks in your main collection",
-                    folders: store.settings.tracksFolders,
-                    emptyHint: "Add your curated library root (e.g. Music/tracks).",
-                    onAdd: { pickFolder { store.addTracksFolder(url: $0, bookmarkData: $1) } },
-                    onRemove: { store.removeTracksFolder(id: $0) }
-                )
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top, spacing: 10) {
+                    folderSourceCard(
+                        icon: "music.note.list",
+                        title: "Library",
+                        subtitle: "Curated collection",
+                        folders: store.settings.tracksFolders,
+                        onAdd: { pickFolder { store.addTracksFolder(url: $0, bookmarkData: $1) } },
+                        onRemove: { store.removeTracksFolder(id: $0) }
+                    )
 
-                folderSourceCard(
-                    icon: "tray.and.arrow.down.fill",
-                    title: "Incoming",
-                    subtitle: "Downloads and batches still being reviewed",
-                    folders: store.settings.curateFolders,
-                    emptyHint: "Add an intake folder (e.g. Downloads/To Curate).",
-                    onAdd: { pickFolder { store.addCurateFolder(url: $0, bookmarkData: $1) } },
-                    onRemove: { store.removeCurateFolder(id: $0) }
-                )
+                    folderSourceCard(
+                        icon: "tray.and.arrow.down.fill",
+                        title: "Incoming",
+                        subtitle: "Downloads to review",
+                        folders: store.settings.curateFolders,
+                        onAdd: { pickFolder { store.addCurateFolder(url: $0, bookmarkData: $1) } },
+                        onRemove: { store.removeCurateFolder(id: $0) }
+                    )
+                }
 
-                hiddenTracksCard
+                hiddenTracksRow
             }
         } footer: {
             footerBar
@@ -46,16 +46,26 @@ struct LibraryFoldersSheet: View {
         title: String,
         subtitle: String,
         folders: [LibraryFolderEntry],
-        emptyHint: String,
         onAdd: @escaping () -> Void,
         onRemove: @escaping (String) -> Void
     ) -> some View {
-        SetaSheetSectionCard(icon: icon, title: title, subtitle: subtitle) {
-            VStack(alignment: .leading, spacing: 8) {
+        SetaSheetSectionCard(icon: icon, title: title, subtitle: subtitle, compact: true) {
+            VStack(alignment: .leading, spacing: 6) {
                 if folders.isEmpty {
-                    emptyFolderPlaceholder(hint: emptyHint, onAdd: onAdd)
+                    Button(action: onAdd) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "plus.circle")
+                                .font(.system(size: 12))
+                            Text("Add folder…")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                        .foregroundStyle(SetaTheme.accent)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 6)
+                    }
+                    .buttonStyle(.plain)
                 } else {
-                    VStack(spacing: 6) {
+                    VStack(spacing: 4) {
                         ForEach(folders) { folder in
                             LibraryFolderRow(
                                 folder: folder,
@@ -64,41 +74,56 @@ struct LibraryFoldersSheet: View {
                             )
                         }
                     }
-                }
 
-                Button(action: onAdd) {
-                    Label("Add folder…", systemImage: "plus")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(SetaTheme.accent)
+                    Button(action: onAdd) {
+                        Label("Add folder…", systemImage: "plus")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(SetaTheme.accent)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
     }
 
-    private var hiddenTracksCard: some View {
+    private var hiddenTracksRow: some View {
         SetaSheetSectionCard(
             icon: "eye.slash",
             title: "Hidden tracks",
-            subtitle: "Excluded from the map and lists. Restore, then rescan."
+            subtitle: "Restore, then rescan",
+            compact: true
         ) {
             if store.excludedTrackPathsSorted.isEmpty {
-                Text("No hidden tracks.")
+                Text("None hidden.")
                     .font(.system(size: 11))
                     .foregroundStyle(SetaTheme.muted)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 2)
+            } else if store.excludedTrackPathsSorted.count == 1,
+                      let path = store.excludedTrackPathsSorted.first {
+                HiddenTrackRow(path: path) {
+                    store.restoreExcludedTrack(path: path)
+                }
             } else {
-                ScrollView {
-                    VStack(spacing: 4) {
-                        ForEach(store.excludedTrackPathsSorted, id: \.self) { path in
-                            HiddenTrackRow(path: path) {
-                                store.restoreExcludedTrack(path: path)
-                            }
+                Menu {
+                    ForEach(store.excludedTrackPathsSorted, id: \.self) { path in
+                        Button(URL(fileURLWithPath: path).lastPathComponent) {
+                            store.restoreExcludedTrack(path: path)
                         }
                     }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("\(store.excludedTrackPathsSorted.count) hidden")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(SetaTheme.text)
+                        Text("Restore…")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(SetaTheme.accent)
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(SetaTheme.muted)
+                    }
                 }
-                .frame(maxHeight: 120)
+                .menuStyle(.borderlessButton)
             }
         }
     }
@@ -136,30 +161,6 @@ struct LibraryFoldersSheet: View {
         }
     }
 
-    @ViewBuilder
-    private func emptyFolderPlaceholder(hint: String, onAdd: @escaping () -> Void) -> some View {
-        Button(action: onAdd) {
-            VStack(spacing: 6) {
-                Image(systemName: "folder.badge.plus")
-                    .font(.system(size: 22))
-                    .foregroundStyle(SetaTheme.muted.opacity(0.85))
-                Text(hint)
-                    .font(.system(size: 11))
-                    .foregroundStyle(SetaTheme.muted)
-                    .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(Color.white.opacity(0.55))
-            .overlay {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(SetaTheme.panelBorder, style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        }
-        .buttonStyle(.plain)
-    }
-
     private func revealInFinder(path: String) {
         let url = URL(fileURLWithPath: path)
         NSWorkspace.shared.activateFileViewerSelecting([url])
@@ -192,21 +193,21 @@ private struct LibraryFolderRow: View {
     @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Image(systemName: "folder.fill")
-                .font(.system(size: 14))
+                .font(.system(size: 12))
                 .foregroundStyle(SetaTheme.accent.opacity(0.9))
-                .frame(width: 32, height: 32)
+                .frame(width: 26, height: 26)
                 .background(SetaTheme.accentSoft)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text(folder.displayName)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(SetaTheme.text)
                     .lineLimit(1)
                 Text(folder.path)
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.system(size: 9, design: .monospaced))
                     .foregroundStyle(SetaTheme.muted)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -215,19 +216,19 @@ private struct LibraryFolderRow: View {
             Spacer(minLength: 0)
 
             HStack(spacing: 2) {
-                SetaIconChip(systemImage: "arrow.up.forward.square", help: "Show in Finder", action: onReveal)
-                SetaIconChip(systemImage: "minus.circle", help: "Stop scanning this folder", action: onRemove)
+                SheetIconButton(systemImage: "arrow.up.forward.square", help: "Show in Finder", action: onReveal)
+                SheetIconButton(systemImage: "minus.circle", help: "Stop scanning", action: onRemove)
             }
-            .opacity(isHovered ? 1 : 0.72)
+            .opacity(isHovered ? 1 : 0.7)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
         .background(isHovered ? Color.white.opacity(0.9) : Color.white.opacity(0.65))
         .overlay {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .strokeBorder(SetaTheme.panelBorder.opacity(isHovered ? 1 : 0.7))
         }
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .onHover { isHovered = $0 }
     }
 }
@@ -238,11 +239,6 @@ private struct HiddenTrackRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: "waveform")
-                .font(.system(size: 11))
-                .foregroundStyle(SetaTheme.muted)
-                .frame(width: 18)
-
             Text(URL(fileURLWithPath: path).lastPathComponent)
                 .font(.system(size: 11))
                 .foregroundStyle(SetaTheme.text)
@@ -255,9 +251,28 @@ private struct HiddenTrackRow: View {
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(SetaTheme.accent)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(Color.white.opacity(0.55))
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+private struct SheetIconButton: View {
+    let systemImage: String
+    let help: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(SetaTheme.muted)
+                .frame(width: 24, height: 24)
+                .background(SetaTheme.panel)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .strokeBorder(SetaTheme.panelBorder)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .help(help)
     }
 }
