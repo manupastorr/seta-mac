@@ -26,27 +26,6 @@ cd seta
 
 Full install guide and screenshots: **[docs/DOWNLOAD.md](docs/DOWNLOAD.md)**.
 
-## Versioning
-
-- App version: `VERSION` (also in the app bundle and release zip name).
-- Changelog: [CHANGELOG.md](CHANGELOG.md).
-
-```bash
-# Maintainer: bump VERSION, update CHANGELOG, then:
-./scripts/make-release.sh
-gh release create v0.2.0 dist/SetaMac-0.2.0-macos14.zip --title "SetaMac 0.2.0" --notes-file CHANGELOG.md
-```
-
-## Develop
-
-```bash
-./scripts/verify-all.sh
-./scripts/run.sh
-open dist/SetaMac.app
-```
-
-Optional signing: `./scripts/sign-app.sh` and `./scripts/notarize-app.sh` (Apple Developer account).
-
 ## Notes
 
 - Reads `library.json` from the Python scanner; does not move or rename your files.

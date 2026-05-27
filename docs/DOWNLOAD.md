@@ -36,12 +36,6 @@ Removing a folder or track in SetaMac does **not** delete your audio files.
 |--------------|----------------|
 | ![Map-first set journey view](screenshots/01-map-overview.png) | ![Mix candidates and Camelot wheel](screenshots/02-mix-candidates.png) |
 
-Re-capture: `./scripts/capture-screenshots.sh` (Terminal needs Accessibility in System Settings).
-
-## Optional: sign & notarize
-
-For distribution without the right-click **Open** step, use an Apple Developer account and `./scripts/sign-app.sh` + `./scripts/notarize-app.sh` (see [README](../README.md)).
-
 ## License
 
 MIT — see [LICENSE](../LICENSE).
