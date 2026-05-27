@@ -10,9 +10,7 @@ struct TrackMapView: View {
     var neighborAnchorID: String?
     var draftTrackIDs: Set<String> = []
     var draftFinalIDs: Set<String> = []
-    var graphEdges: [(SetaTrack, SetaTrack, Double)] = []
     var mixLinks: [(SetaTrack, SetaTrack)] = []
-    var showExploreLayout: Bool = false
     var showSetZoneOverlay: Bool = true
     var activeMomentIDs: Set<String> = []
     var energyDomain: ClosedRange<Double> = MapPlotMetrics.energyDomain
@@ -182,9 +180,6 @@ struct TrackMapView: View {
             if showSetZoneOverlay {
                 drawSetMoments(context: &context, layout: layout)
             }
-            if showExploreLayout {
-                drawGraphEdges(context: &context, layout: layout)
-            }
             drawMixLinks(context: &context, layout: layout)
             drawTracks(context: &context, layout: layout)
         }
@@ -324,21 +319,6 @@ struct TrackMapView: View {
                     .foregroundStyle(Color(hex: "#1e1e2d").opacity(0.32 * labelOpacity)),
                 at: CGPoint(x: ellipse.cx, y: labelY),
                 anchor: .center
-            )
-        }
-    }
-
-    private func drawGraphEdges(context: inout GraphicsContext, layout: MapPlotLayout) {
-        for (source, target, score) in graphEdges {
-            let start = layout.trackPoint(for: source, jitter: true)
-            let end = layout.trackPoint(for: target, jitter: true)
-            var path = Path()
-            path.move(to: start)
-            path.addLine(to: end)
-            context.stroke(
-                path,
-                with: .color(SetaTheme.accent.opacity(0.08 + score * 0.35)),
-                lineWidth: 0.5 + score * 0.8
             )
         }
     }

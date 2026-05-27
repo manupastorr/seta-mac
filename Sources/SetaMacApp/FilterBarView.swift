@@ -189,36 +189,15 @@ struct FilterBarView: View {
     }
 
     private var mapControls: some View {
-        HStack(spacing: 5) {
+        Group {
             if compact {
-                SetaIconChip(systemImage: "map", help: "Mix map", isActive: !store.settings.showExploreLinks) {
-                    store.settings.showExploreLinks = false
-                    store.saveSettings()
-                }
-                SetaIconChip(systemImage: "link", help: "Mix links", isActive: store.settings.showExploreLinks) {
-                    store.settings.showExploreLinks = true
-                    store.saveSettings()
-                }
                 SetaIconChip(systemImage: "arrow.counterclockwise", help: "Reset view") {
                     mapResetTrigger = UUID()
                 }
             } else {
-                SetaChip(title: "Mix map", isActive: !store.settings.showExploreLinks) {
-                    store.settings.showExploreLinks = false
-                    store.saveSettings()
-                }
-                SetaChip(title: "Mix links", isActive: store.settings.showExploreLinks) {
-                    store.settings.showExploreLinks = true
-                    store.saveSettings()
-                }
                 SetaSecondaryButton(title: "Reset view") {
                     mapResetTrigger = UUID()
                 }
-            }
-            if !compact, store.settings.showExploreLinks, !store.libraryHasMixEdges {
-                Text("Mix links not built for this scan")
-                    .font(.system(size: 10))
-                    .foregroundStyle(SetaTheme.muted)
             }
         }
     }

@@ -256,10 +256,6 @@ func setMomentsAndSettingsHelpers() throws {
     let warmupOnly = library.filteredTracks(using: LibraryFilter(moments: ["warmup"]))
     check(warmupOnly.map(\.id) == ["warm"], "moment filter")
 
-    let byID = Dictionary(uniqueKeysWithValues: library.tracks.map { ($0.id, $0) })
-    let links = library.exploreLinks(for: "warm", tracksByID: byID)
-    check(links.count == 1 && links[0].0.id == "peak", "explore links")
-
     var draft = SetaDraft(trackIds: ["warm", "peak"])
     draft.reorderTrackIds(["peak", "warm"])
     check(draft.trackIds == ["peak", "warm"], "draft reorder")
@@ -348,12 +344,6 @@ func smokeRealLibrary() throws {
     if let anchor = withBPMKey {
         let neighbors = Playback.mixNeighbors(trackId: anchor.id, tracks: filtered)
         check(neighbors.ids.contains(anchor.id), "real neighbor anchor included")
-    }
-
-    if !library.edges.isEmpty, let edge = library.edges.first {
-        let byID = Dictionary(uniqueKeysWithValues: library.tracks.map { ($0.id, $0) })
-        let links = library.exploreLinks(for: edge.source, tracksByID: byID)
-        check(!links.isEmpty, "real explore links resolve")
     }
 
     var draft = SetaDraft()

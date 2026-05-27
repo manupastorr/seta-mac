@@ -25,7 +25,6 @@ struct SetaMacApp: App {
             CommandMenu("Library") {
                 Button("Rescan Library") { store.rescanLibrary() }
                     .keyboardShortcut("r", modifiers: [.command, .shift])
-                Button("Rescan With Mix Edges") { store.rescanLibrary(fullEdges: true) }
             }
             CommandMenu("Playback") {
                 Button("Play / Pause") { store.togglePlayPause() }

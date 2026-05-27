@@ -3,18 +3,15 @@ import Foundation
 public struct AppSettings: Codable, Equatable {
     public var lastLibraryPath: String?
     public var setaScannerRoot: String?
-    public var showExploreLinks: Bool
     public var showSetZoneOverlay: Bool
 
     public init(
         lastLibraryPath: String? = nil,
         setaScannerRoot: String? = nil,
-        showExploreLinks: Bool = false,
         showSetZoneOverlay: Bool = true
     ) {
         self.lastLibraryPath = lastLibraryPath
         self.setaScannerRoot = setaScannerRoot
-        self.showExploreLinks = showExploreLinks
         self.showSetZoneOverlay = showSetZoneOverlay
     }
 
@@ -82,28 +79,5 @@ public enum LibraryScanner {
         } catch {
             return ScanResult(exitCode: 1, output: error.localizedDescription)
         }
-    }
-}
-
-public extension SetaLibrary {
-    func exploreLinks(for trackID: String, tracksByID: [String: SetaTrack]) -> [(SetaTrack, Double)] {
-        edges.compactMap { edge -> (SetaTrack, Double)? in
-            if edge.source == trackID, let track = tracksByID[edge.target] {
-                return (track, edge.score)
-            }
-            if edge.target == trackID, let track = tracksByID[edge.source] {
-                return (track, edge.score)
-            }
-            return nil
-        }
-        .sorted { $0.1 > $1.1 }
-    }
-
-    func visibleEdges(trackIDs: Set<String>) -> [SetaEdge] {
-        edges.filter { trackIDs.contains($0.source) && trackIDs.contains($0.target) }
-    }
-
-    var hasMixEdges: Bool {
-        !edges.isEmpty
     }
 }

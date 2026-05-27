@@ -47,7 +47,6 @@ final class LibraryStore: ObservableObject {
     private var playQueueSig = ""
     private var persistWorkItem: DispatchWorkItem?
     private var suppressPlaybackUntil = Date.distantPast
-    private let maxMapGraphEdges = 1800
     private let energyOverridesKey = "seta-energy-overrides-v1"
 
     init() {
@@ -105,26 +104,6 @@ final class LibraryStore: ObservableObject {
         highlightNeighbors ? neighborResult.ids : []
     }
 
-    var exploreLinks: [(SetaTrack, Double)] {
-        guard settings.showExploreLinks,
-              let library,
-              let selectedTrackID else { return [] }
-        return library.exploreLinks(for: selectedTrackID, tracksByID: tracksByID)
-    }
-
-    var mapGraphEdges: [(SetaTrack, SetaTrack, Double)] {
-        guard settings.showExploreLinks, let library else { return [] }
-        let ids = Set(filteredTracks.map(\.id))
-        let byID = tracksByID
-        return library.visibleEdges(trackIDs: ids)
-            .sorted { $0.score > $1.score }
-            .prefix(maxMapGraphEdges)
-            .compactMap { edge in
-                guard let source = byID[edge.source], let target = byID[edge.target] else { return nil }
-                return (source, target, edge.score)
-            }
-    }
-
     var mixLinks: [(SetaTrack, SetaTrack)] {
         guard highlightNeighbors,
               let anchor = neighborAnchorID,
@@ -138,10 +117,6 @@ final class LibraryStore: ObservableObject {
 
     var draftTrackIDSet: Set<String> { Set(draft.trackIds) }
     var draftFinalIDSet: Set<String> { Set(draft.finalIds) }
-
-    var libraryHasMixEdges: Bool {
-        library?.hasMixEdges ?? false
-    }
 
     var canQueueKeyboardNav: Bool {
         guard mixDockExpanded else { return false }
@@ -288,14 +263,14 @@ final class LibraryStore: ObservableObject {
         self.library = applyingEnergyOverrides(to: library)
     }
 
-    func rescanLibrary(fullEdges: Bool = false) {
+    func rescanLibrary() {
         guard let scannerRoot = scannerRootURL else {
             statusMessage = "Seta scanner folder not found."
             return
         }
         isRescanning = true
         Task {
-            let result = LibraryScanner.scanLibrary(at: scannerRoot, quick: !fullEdges)
+            let result = LibraryScanner.scanLibrary(at: scannerRoot, quick: true)
             await MainActor.run {
                 isRescanning = false
                 if result.exitCode == 0 {

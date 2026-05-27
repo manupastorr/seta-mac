@@ -54,7 +54,6 @@ cd ../seta-mac
 ## Scanner Bridge
 
 - [ ] Rescan Library runs Python `scan_library.py` and reloads `library.json`.
-- [ ] Rescan With Mix Edges rebuilds `edges`.
 
 ## Optional Release
 

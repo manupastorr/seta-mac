@@ -35,7 +35,6 @@ On first launch the app auto-loads the newest available `library.json` from:
 - Decode/validate `library.json`
 - Native track list + BPM x energy map
 - Set-zone filters/overlays, Camelot, genre, source, BPM, draft-only filters
-- Explore mix links overlay from precomputed `edges`
 - Neighbor queue + play queue navigation
 - Drafts: multiple drafts, notes, drag reorder, final marks, persistence, export
 - Player dock with waveform seek, time display, keyboard shortcuts
