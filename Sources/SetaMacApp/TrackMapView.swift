@@ -7,6 +7,7 @@ struct TrackMapView: View {
     @Binding var hoveredTrackID: String?
     var playingTrackID: String?
     var neighborHighlightIDs: Set<String> = []
+    var riskyNeighborIDs: Set<String> = []
     var neighborAnchorID: String?
     var draftTrackIDs: Set<String> = []
     var draftFinalIDs: Set<String> = []
@@ -450,6 +451,7 @@ struct TrackMapView: View {
     ) {
         let anchor = neighborAnchorID
         let neighbors = neighborHighlightIDs
+        let risky = riskyNeighborIDs
         let skipHoveredInCanvas = !showsLoupe && hoveredTrackID != nil
 
         for track in tracks {
@@ -462,6 +464,7 @@ struct TrackMapView: View {
                 displayPositions: displayPositions,
                 anchor: anchor,
                 neighbors: neighbors,
+                risky: risky,
                 zoomHighlight: false
             )
         }
@@ -474,12 +477,14 @@ struct TrackMapView: View {
         displayPositions: [String: CGPoint],
         anchor: String?,
         neighbors: Set<String>,
+        risky: Set<String>,
         zoomHighlight: Bool
     ) {
         let point = layout.trackPoint(for: track, displayPositions: displayPositions)
         let isSelected = track.id == selectedTrackID || track.id == anchor
         let isPlaying = track.id == playingTrackID
         let isNeighbor = neighbors.contains(track.id)
+        let isRisky = risky.contains(track.id)
         let isHovered = track.id == hoveredTrackID
         let isDraft = draftTrackIDs.contains(track.id)
         let isFinal = draftFinalIDs.contains(track.id)
@@ -499,6 +504,9 @@ struct TrackMapView: View {
             color = color.opacity(0.95)
         } else if !isNeighbor, !isSelected {
             color = color.opacity(0.2)
+        }
+        if isRisky, !isSelected {
+            color = color.opacity(0.45)
         }
 
         context.fill(Path(ellipseIn: rect), with: .color(color))
@@ -521,6 +529,12 @@ struct TrackMapView: View {
                 Path(ellipseIn: rect.insetBy(dx: -2.5, dy: -2.5)),
                 with: .color(SetaTheme.accent),
                 lineWidth: zoomHighlight ? 1.5 : (isPlaying ? 1.5 : 1.25)
+            )
+        } else if isRisky {
+            context.stroke(
+                Path(ellipseIn: rect.insetBy(dx: -2, dy: -2)),
+                with: .color(Color(hex: "#c62828").opacity(0.75)),
+                style: StrokeStyle(lineWidth: 1.2, dash: [3, 2])
             )
         } else if isNeighbor {
             context.stroke(

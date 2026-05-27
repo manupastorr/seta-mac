@@ -10,7 +10,7 @@ struct MixDockTabs: View {
             HStack(spacing: 6) {
                 MixDockTabButton(
                     shortcut: "m",
-                    title: "neighbors",
+                    title: "candidates",
                     count: store.neighborResult.list.count,
                     isActive: store.mixDockExpanded && store.mixDockTab == .neighbors
                 ) {
@@ -39,7 +39,7 @@ struct MixDockView: View {
                 HStack(spacing: 6) {
                     MixDockTabButton(
                         shortcut: "m",
-                        title: "neighbors",
+                        title: "candidates",
                         count: store.neighborResult.list.count,
                         isActive: store.mixDockTab == .neighbors
                     ) {
@@ -230,7 +230,7 @@ struct NeighborsPane: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 2) {
                 if !store.highlightNeighbors {
-                    Text("Press n or pick Neighbors on a track.")
+                    Text("Press n or pick Candidates on a track.")
                         .font(.system(size: 11))
                         .foregroundStyle(SetaTheme.muted)
                         .padding(.top, 4)
@@ -243,36 +243,50 @@ struct NeighborsPane: View {
                         isPlaying: store.playingTrackID == anchorTrack.id,
                         isInDraft: store.draft.trackIds.contains(anchorTrack.id),
                         isQueueFocus: store.queueFocusTrackID == anchorTrack.id,
+                        smartScore: nil,
                         onSelect: { reanchor in
                             store.playTrackViaView(id: anchorTrack.id, reanchor: reanchor)
                         },
-                        onAdd: { store.addTrackToDraft(anchorTrack.id) },
+                        onAdd: { store.addTrackToDraftAfterAnchor(anchorTrack.id) },
+                        onBridge: { store.findBridge() },
+                        onWorks: {},
+                        onReject: {},
+                        onExplain: {},
                         onRemoveFromSeta: { store.excludeTrackFromLibrary(anchorTrack) }
                     )
-                    if store.neighborResult.list.isEmpty {
-                        Text("No mixable neighbors in current filters.")
+                    if !store.bridgeRoutes.isEmpty {
+                        BridgeRoutesView(store: store)
+                            .padding(.vertical, 6)
+                    }
+                    if store.smartNeighborResult.isEmpty {
+                        Text("No smart candidates in current filters.")
                             .font(.system(size: 11))
                             .foregroundStyle(SetaTheme.muted)
                             .padding(.top, 4)
                     } else {
-                        ForEach(Array(store.neighborResult.list.enumerated()), id: \.element.id) { index, track in
+                        ForEach(Array(store.smartNeighborResult.enumerated()), id: \.element.id) { index, candidate in
                             NeighborRow(
-                                track: track,
+                                track: candidate.track,
                                 rank: index + 1,
-                                score: Playback.mixScore(anchorTrack, track),
-                                isPlaying: store.playingTrackID == track.id,
-                                isInDraft: store.draft.trackIds.contains(track.id),
-                                isQueueFocus: store.queueFocusTrackID == track.id,
+                                score: candidate.score.total,
+                                isPlaying: store.playingTrackID == candidate.track.id,
+                                isInDraft: store.draft.trackIds.contains(candidate.track.id),
+                                isQueueFocus: store.queueFocusTrackID == candidate.track.id,
+                                smartScore: candidate.score,
                                 onSelect: { reanchor in
-                                    store.playTrackViaView(id: track.id, reanchor: reanchor)
+                                    store.playTrackViaView(id: candidate.track.id, reanchor: reanchor)
                                 },
-                                onAdd: { store.addTrackToDraft(track.id) },
-                                onRemoveFromSeta: { store.excludeTrackFromLibrary(track) }
+                                onAdd: { store.addTrackToDraftAfterAnchor(candidate.track.id) },
+                                onBridge: { store.findBridge(to: candidate.track.id) },
+                                onWorks: { store.markTransition(candidate.track.id, rating: 2) },
+                                onReject: { store.markTransition(candidate.track.id, rating: -2) },
+                                onExplain: { store.explainCandidate(candidate.track.id) },
+                                onRemoveFromSeta: { store.excludeTrackFromLibrary(candidate.track) }
                             )
                         }
                     }
                 } else {
-                    Text("Select a track on the map to see mix neighbors.")
+                    Text("Select a track on the map to see candidates.")
                         .font(.system(size: 11))
                         .foregroundStyle(SetaTheme.muted)
                 }
@@ -306,15 +320,21 @@ struct DraftPane: View {
             VStack(spacing: 5) {
                 HStack(spacing: 5) {
                     SetaSecondaryButton(title: "Play draft", expand: true) { store.playDraftFromStart() }
-                    SetaSecondaryButton(title: "Import Rekordbox", expand: true) { store.beginRekordboxImport() }
+                    SetaSecondaryButton(title: "Analyze draft", expand: true) { store.analyzeDraft() }
                 }
                 HStack(spacing: 5) {
+                    SetaSecondaryButton(title: "Import Rekordbox", expand: true) { store.beginRekordboxImport() }
                     SetaSecondaryButton(title: "Export M3U", expand: true) { store.exportDraftM3U() }
+                }
+                HStack(spacing: 5) {
                     SetaSecondaryButton(title: "Copy list", expand: true) { store.copyDraftListToPasteboard() }
                 }
             }
             if !store.draftTracks.isEmpty {
                 DraftEnergyRampView(tracks: store.draftTracks)
+            }
+            if !store.draftWeakLinks.isEmpty {
+                DraftWeakLinksView(store: store)
             }
             if store.draftTracks.isEmpty {
                 Text("No tracks yet — select a track and press a to add.")
@@ -375,8 +395,13 @@ struct NeighborRow: View {
     let isPlaying: Bool
     let isInDraft: Bool
     var isQueueFocus: Bool = false
+    var smartScore: TransitionScore?
     let onSelect: (Bool) -> Void
     let onAdd: () -> Void
+    let onBridge: () -> Void
+    let onWorks: () -> Void
+    let onReject: () -> Void
+    let onExplain: () -> Void
     let onRemoveFromSeta: () -> Void
 
     @State private var isHovered = false
@@ -406,7 +431,7 @@ struct NeighborRow: View {
                 }
                 .frame(width: 14)
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(track.displayTitle)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(SetaTheme.text)
@@ -415,6 +440,16 @@ struct NeighborRow: View {
                         .font(.system(size: 10))
                         .foregroundStyle(SetaTheme.muted)
                         .lineLimit(1)
+                    if let smartScore {
+                        CandidateReasonChips(score: smartScore)
+                        CandidateInlineActions(
+                            onAdd: onAdd,
+                            onBridge: onBridge,
+                            onWorks: onWorks,
+                            onReject: onReject,
+                            onExplain: onExplain
+                        )
+                    }
                 }
                 .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
 
@@ -436,9 +471,138 @@ struct NeighborRow: View {
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .onHover { isHovered = $0 }
         .contextMenu {
-            Button("Add to draft") { onAdd() }
+            Button("Add after anchor") { onAdd() }
+            Button("Find bridge") { onBridge() }
+            Button("Works") { onWorks() }
+            Button("No") { onReject() }
+            Button("Explain") { onExplain() }
             Divider()
             Button("Remove from Seta…", action: onRemoveFromSeta)
+        }
+    }
+}
+
+struct CandidateReasonChips: View {
+    let score: TransitionScore
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Text(score.kind.rawValue)
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundStyle(kindColor)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(kindColor.opacity(0.12))
+                .clipShape(Capsule())
+            ForEach(Array(score.reasons.prefix(3)), id: \.self) { reason in
+                Text(reason)
+                    .font(.system(size: 8, weight: .medium))
+                    .foregroundStyle(SetaTheme.muted)
+                    .lineLimit(1)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(SetaTheme.panel)
+                    .clipShape(Capsule())
+            }
+            if score.warnings.contains("vocal risk") {
+                Text("vocal risk")
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(Color(hex: "#c62828"))
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Color(hex: "#c62828").opacity(0.1))
+                    .clipShape(Capsule())
+            }
+        }
+    }
+
+    private var kindColor: Color {
+        switch score.kind {
+        case .smooth: return Color(hex: "#2E7D32")
+        case .lift: return Color(hex: "#1565C0")
+        case .bridge: return SetaTheme.accent
+        case .contrast: return Color(hex: "#AD1457")
+        case .closing: return Color(hex: "#455A64")
+        case .risky: return Color(hex: "#c62828")
+        }
+    }
+}
+
+struct CandidateInlineActions: View {
+    let onAdd: () -> Void
+    let onBridge: () -> Void
+    let onWorks: () -> Void
+    let onReject: () -> Void
+    let onExplain: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            action("Add", onAdd)
+            action("Bridge", onBridge)
+            action("Works", onWorks)
+            action("No", onReject)
+            action("Why", onExplain)
+        }
+    }
+
+    private func action(_ title: String, _ run: @escaping () -> Void) -> some View {
+        Button(title, action: run)
+            .buttonStyle(.plain)
+            .font(.system(size: 9, weight: .medium))
+            .foregroundStyle(SetaTheme.accent)
+    }
+}
+
+struct BridgeRoutesView: View {
+    @ObservedObject var store: LibraryStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Bridge routes")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(SetaTheme.muted)
+            ForEach(store.bridgeRoutes.prefix(3)) { route in
+                Text(route.tracks.map(\.displayTitle).joined(separator: " → "))
+                    .font(.system(size: 10))
+                    .foregroundStyle(SetaTheme.text)
+                    .lineLimit(2)
+                    .padding(6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(SetaTheme.accentSoft)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+        }
+    }
+}
+
+struct DraftWeakLinksView: View {
+    @ObservedObject var store: LibraryStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Weak links")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(SetaTheme.muted)
+            ForEach(store.draftWeakLinks.prefix(3)) { link in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(link.from.displayTitle) → \(link.to.displayTitle) · \(Int((link.score.total * 100).rounded()))%")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(SetaTheme.text)
+                        .lineLimit(2)
+                    ForEach(link.suggestions.prefix(2)) { suggestion in
+                        Button(suggestion.title) {
+                            store.applyDraftSuggestion(suggestion, after: link.from.id)
+                        }
+                        .font(.system(size: 10))
+                        .buttonStyle(.plain)
+                        .foregroundStyle(SetaTheme.accent)
+                    }
+                }
+                .padding(6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(hex: "#c62828").opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
         }
     }
 }

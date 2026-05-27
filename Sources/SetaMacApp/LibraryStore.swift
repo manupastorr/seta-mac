@@ -35,6 +35,9 @@ final class LibraryStore: ObservableObject {
     @Published var queueFocusIndex = -1
     @Published var searchResultsIndex = -1
     @Published var trackOverrides: [String: TrackOverride] = [:]
+    @Published var transitionFeedback: [String: TransitionFeedback] = TransitionFeedbackStorage.load()
+    @Published var bridgeRoutes: [SmartBridgeRoute] = []
+    @Published var draftWeakLinks: [DraftWeakLink] = []
     @Published var showingRekordboxImport = false
     @Published var rekordboxImportCandidates: [PlaylistImportCandidate] = []
     @Published var rekordboxImportMatchedCounts: [Int] = []
@@ -104,14 +107,34 @@ final class LibraryStore: ObservableObject {
         guard let anchor = neighborAnchorID else {
             return Playback.MixNeighborsResult(ids: [], list: [])
         }
-        return Playback.mixNeighbors(trackId: anchor, tracks: filteredTracks)
+        let neighbors = smartNeighbors(for: anchor)
+        var ids = Set(neighbors.map(\.track.id))
+        ids.insert(anchor)
+        return Playback.MixNeighborsResult(ids: ids, list: neighbors.map(\.track))
+    }
+
+    var smartNeighborResult: [SmartNeighbor] {
+        guard let anchor = neighborAnchorID else { return [] }
+        return smartNeighbors(for: anchor)
+    }
+
+    var smartNeighborByID: [String: SmartNeighbor] {
+        Dictionary(uniqueKeysWithValues: smartNeighborResult.map { ($0.track.id, $0) })
     }
 
     var neighborHighlightIDs: Set<String> {
         highlightNeighbors ? neighborResult.ids : []
     }
 
+    var riskyNeighborIDs: Set<String> {
+        guard highlightNeighbors else { return [] }
+        return Set(smartNeighborResult.filter { $0.score.kind == .risky }.map(\.track.id))
+    }
+
     var mixLinks: [(SetaTrack, SetaTrack)] {
+        if let route = bridgeRoutes.first, route.tracks.count >= 2 {
+            return Array(zip(route.tracks, route.tracks.dropFirst()))
+        }
         guard highlightNeighbors,
               let anchor = neighborAnchorID,
               let source = tracksByID[anchor] else { return [] }
@@ -161,6 +184,15 @@ final class LibraryStore: ObservableObject {
             draftPlayMode: draftPlayMode,
             draftTrackIds: draft.trackIds,
             draftSortMode: draft.sortMode
+        )
+    }
+
+    func smartNeighbors(for anchor: String) -> [SmartNeighbor] {
+        SmartMixEngine.neighbors(
+            for: anchor,
+            in: filteredTracks,
+            intent: JourneyIntent(),
+            feedback: transitionFeedback
         )
     }
 
@@ -460,6 +492,7 @@ final class LibraryStore: ObservableObject {
         if highlightNeighbors {
             draftPlayMode = false
             neighborQueueAnchor = selectedTrackID
+            bridgeRoutes = []
         }
         syncPlayQueue()
     }
@@ -611,6 +644,7 @@ final class LibraryStore: ObservableObject {
         selectedTrackID = trackId
         highlightNeighbors = true
         draftPlayMode = false
+        bridgeRoutes = []
         syncPlayQueue()
         playAudio(id: trackId, keepSelection: trackId)
         queueFocusIndex = 0
@@ -655,6 +689,24 @@ final class LibraryStore: ObservableObject {
         persistDraftSoon()
     }
 
+    func addTrackToDraftAfterAnchor(_ trackId: String) {
+        guard !trackId.isEmpty else { return }
+        if draft.trackIds.contains(trackId) {
+            statusMessage = "Already in draft."
+            return
+        }
+        if let anchor = neighborAnchorID ?? selectedTrackID,
+           let index = draft.trackIds.firstIndex(of: anchor) {
+            var ids = draft.trackIds
+            ids.insert(trackId, at: index + 1)
+            draft.reorderTrackIds(ids)
+        } else {
+            draft.add(trackId: trackId)
+        }
+        persistDraftSoon()
+        statusMessage = "Added after anchor."
+    }
+
     func addSelectedToDraft() {
         guard let selectedTrackID else { return }
         addTrackToDraft(selectedTrackID)
@@ -674,6 +726,73 @@ final class LibraryStore: ObservableObject {
     func setDraftNote(_ note: String, for trackId: String) {
         draft.setNote(note, for: trackId)
         persistDraftSoon()
+    }
+
+    func markTransition(_ trackId: String, rating: Int) {
+        guard let anchor = neighborAnchorID ?? selectedTrackID else { return }
+        let item = TransitionFeedback(
+            fromTrackID: anchor,
+            toTrackID: trackId,
+            rating: rating
+        )
+        transitionFeedback[item.id] = item
+        TransitionFeedbackStorage.save(transitionFeedback)
+        syncPlayQueue()
+        statusMessage = rating > 0 ? "Transition marked as working." : "Transition marked as not working."
+    }
+
+    func explainCandidate(_ trackId: String) {
+        guard let candidate = smartNeighborByID[trackId] else { return }
+        let reasons = candidate.score.reasons.joined(separator: ", ")
+        let warnings = candidate.score.warnings.isEmpty
+            ? ""
+            : " · \(candidate.score.warnings.joined(separator: ", "))"
+        statusMessage = "\(candidate.score.kind.rawValue): \(reasons)\(warnings)"
+    }
+
+    func findBridge(to trackId: String? = nil) {
+        guard let anchor = neighborAnchorID ?? selectedTrackID else { return }
+        bridgeRoutes = SmartMixEngine.bridgeRoutes(
+            from: anchor,
+            to: trackId,
+            in: filteredTracks,
+            intent: JourneyIntent(mode: .bridge, targetTrackID: trackId),
+            feedback: transitionFeedback
+        )
+        if bridgeRoutes.isEmpty {
+            statusMessage = "No bridge route found in current filters."
+        } else {
+            statusMessage = "Found \(bridgeRoutes.count) bridge route\(bridgeRoutes.count == 1 ? "" : "s")."
+        }
+    }
+
+    func analyzeDraft() {
+        draftWeakLinks = SmartMixEngine.draftWeakLinks(
+            draft: draft,
+            tracks: library?.tracks ?? [],
+            feedback: transitionFeedback
+        )
+        if draftWeakLinks.isEmpty {
+            statusMessage = "Draft transitions look solid."
+        } else {
+            statusMessage = "Found \(draftWeakLinks.count) weak draft link\(draftWeakLinks.count == 1 ? "" : "s")."
+        }
+    }
+
+    func applyDraftSuggestion(_ suggestion: DraftSuggestion, after fromTrackID: String) {
+        guard !suggestion.trackIDs.isEmpty,
+              let index = draft.trackIds.firstIndex(of: fromTrackID) else { return }
+        var ids = draft.trackIds
+        let inserts = suggestion.trackIDs.filter { !ids.contains($0) }
+        guard !inserts.isEmpty else {
+            statusMessage = "Suggested bridge is already in the draft."
+            return
+        }
+        ids.insert(contentsOf: inserts, at: index + 1)
+        draft.reorderTrackIds(ids)
+        persistDraftSoon()
+        analyzeDraft()
+        statusMessage = "Applied bridge suggestion."
     }
 
     func moveDraftTrack(from source: IndexSet, to destination: Int) {
@@ -817,6 +936,27 @@ final class LibraryStore: ObservableObject {
     }
 
     func syncPlayQueue() {
+        if highlightNeighbors, let anchorId = neighborAnchorID {
+            let filteredIDs = Set(filteredTracks.map(\.id))
+            if bridgeRoutes.contains(where: { route in
+                route.tracks.contains { !filteredIDs.contains($0.id) }
+            }) {
+                bridgeRoutes = []
+            }
+            let queue = [tracksByID[anchorId]].compactMap { $0 } + smartNeighbors(for: anchorId).map(\.track)
+            let signature = Playback.queueSignature(queue)
+            if signature != playQueueSig || playQueue.isEmpty {
+                playQueue = queue
+                playQueueSig = signature
+                playIndex = Playback.resolvePlayIndex(queue: queue, trackId: playingTrackID ?? selectedTrackID)
+            }
+            if let playingTrackID, !playQueue.contains(where: { $0.id == playingTrackID }) {
+                self.playingTrackID = nil
+                player.stop()
+            }
+            return
+        }
+
         var state = Playback.PlayQueueState(
             playingId: playingTrackID,
             selectedId: selectedTrackID,
@@ -879,8 +1019,7 @@ final class LibraryStore: ObservableObject {
 
     private func playInNeighborMode(id: String) {
         if let anchorId = neighborAnchorID {
-            let neighbors = Playback.mixNeighbors(trackId: anchorId, tracks: filteredTracks)
-            if neighbors.ids.contains(id) {
+            if neighborResult.ids.contains(id) {
                 syncPlayQueue()
                 playAudio(id: id, keepSelection: anchorId)
                 return

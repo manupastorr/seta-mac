@@ -1,6 +1,6 @@
 import Foundation
 
-public struct SetaLibrary: Decodable, Equatable {
+public struct SetaLibrary: Decodable, Equatable, Sendable {
     public let generatedAt: String?
     public let tracksRoot: String?
     public let curateRoot: String?
@@ -102,7 +102,7 @@ public struct SetaLibrary: Decodable, Equatable {
     }
 }
 
-public struct SetaTrack: Decodable, Identifiable, Equatable {
+public struct SetaTrack: Decodable, Identifiable, Equatable, Sendable {
     public let id: String
     public let path: String
     public let artist: String?
@@ -242,7 +242,7 @@ public struct SetaTrack: Decodable, Identifiable, Equatable {
     }
 }
 
-public struct SetaEdge: Decodable, Equatable {
+public struct SetaEdge: Decodable, Equatable, Sendable {
     public let source: String
     public let target: String
     public let score: Double

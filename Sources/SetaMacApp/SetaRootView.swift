@@ -45,6 +45,7 @@ struct SetaRootView: View {
                     hoveredTrackID: $hoveredTrackID,
                     playingTrackID: store.playingTrackID,
                     neighborHighlightIDs: store.neighborHighlightIDs,
+                    riskyNeighborIDs: store.riskyNeighborIDs,
                     neighborAnchorID: store.neighborAnchorID,
                     draftTrackIDs: store.draftTrackIDSet,
                     draftFinalIDs: store.draftFinalIDSet,

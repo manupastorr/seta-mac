@@ -534,6 +534,77 @@ func trackOverrideHelpers() throws {
     check(afterClearBpm.key == "8A", "base key unchanged when only energy overridden")
 }
 
+func smartJourneyChecks() throws {
+    let json = """
+    {
+      "track_count": 8,
+      "tracks": [
+        { "id": "anchor", "path": "/a.wav", "artist": "A", "title": "Anchor", "source": "tracks", "genre": "House", "bpm": 124, "energy": 0.50, "energy_intro": 0.48, "energy_outro": 0.52, "key": "8A", "vocals": "no", "vocals_confidence": 0.8 },
+        { "id": "same", "path": "/same.wav", "artist": "B", "title": "Same", "source": "tracks", "genre": "House", "bpm": 125, "energy": 0.58, "energy_intro": 0.53, "energy_outro": 0.60, "key": "8A", "vocals": "no", "vocals_confidence": 0.8 },
+        { "id": "weak", "path": "/weak.wav", "artist": "C", "title": "Weak", "source": "tracks", "genre": "Techno", "bpm": 132, "energy": 0.84, "key": "10A", "vocals": "no", "vocals_confidence": 0.8 },
+        { "id": "lift", "path": "/lift.wav", "artist": "D", "title": "Lift", "source": "tracks", "genre": "House", "bpm": 126, "energy": 0.64, "energy_intro": 0.55, "key": "8A", "vocals": "no", "vocals_confidence": 0.8 },
+        { "id": "midbridge", "path": "/mid.wav", "artist": "D", "title": "Mid Bridge", "source": "tracks", "genre": "House", "bpm": 128, "energy": 0.70, "energy_intro": 0.62, "key": "9A", "vocals": "no", "vocals_confidence": 0.8 },
+        { "id": "vocal", "path": "/vocal.wav", "artist": "E", "title": "Vocal", "source": "tracks", "genre": "House", "bpm": 125, "energy": 0.56, "key": "8A", "vocals": "yes", "vocals_confidence": 0.9 },
+        { "id": "vocal2", "path": "/vocal2.wav", "artist": "F", "title": "Vocal Two", "source": "tracks", "genre": "House", "bpm": 126, "energy": 0.58, "key": "8A", "vocals": "yes", "vocals_confidence": 0.9 },
+        { "id": "missing", "path": "/missing.wav", "artist": "G", "title": "Missing", "source": "tracks", "genre": "House", "energy": 0.58 }
+      ],
+      "edges": []
+    }
+    """
+    let tracks = try SetaLibrary.decode(from: Data(json.utf8)).tracks
+    let byId = Dictionary(uniqueKeysWithValues: tracks.map { ($0.id, $0) })
+    let anchor = byId["anchor"]!
+    let same = byId["same"]!
+    let weak = byId["weak"]!
+    let lift = byId["lift"]!
+    let vocal = byId["vocal"]!
+    let vocal2 = byId["vocal2"]!
+
+    let strongScore = SmartMixEngine.score(from: anchor, to: same)
+    let weakScore = SmartMixEngine.score(from: anchor, to: weak)
+    check(strongScore.total > weakScore.total, "smart score ranks close same-key candidate higher")
+    check(strongScore.reasons.contains("same key"), "smart score explains same key")
+
+    let liftScore = SmartMixEngine.score(from: anchor, to: lift, intent: JourneyIntent(mode: .lift))
+    check(liftScore.kind == .lift, "lift intent classifies controlled lift")
+
+    let vocalScore = SmartMixEngine.score(from: vocal, to: vocal2)
+    check(vocalScore.warnings.contains("vocal risk"), "vocal clash warning")
+    check(!SmartMixEngine.score(from: anchor, to: vocal).warnings.contains("vocal risk"), "instrumental to vocal is not vocal clash")
+
+    let feedback = [
+        TransitionFeedback.key(from: "anchor", to: "weak"): TransitionFeedback(fromTrackID: "anchor", toTrackID: "weak", rating: 2)
+    ]
+    let improved = SmartMixEngine.score(from: anchor, to: weak, feedback: feedback)
+    check(improved.total > weakScore.total, "feedback improves reranking")
+
+    let feedbackURL = FileManager.default.temporaryDirectory.appendingPathComponent("seta-feedback-check.json")
+    let duplicateFeedback = [
+        TransitionFeedback(fromTrackID: "anchor", toTrackID: "same", rating: -2, updatedAt: 1),
+        TransitionFeedback(fromTrackID: "anchor", toTrackID: "same", rating: 2, updatedAt: 2)
+    ]
+    let feedbackData = try JSONEncoder().encode(duplicateFeedback)
+    try feedbackData.write(to: feedbackURL, options: [.atomic])
+    let loadedFeedback = TransitionFeedbackStorage.load(from: feedbackURL)
+    check(loadedFeedback[TransitionFeedback.key(from: "anchor", to: "same")]?.rating == 2, "feedback load tolerates duplicates")
+
+    let neighbors = SmartMixEngine.neighbors(for: "anchor", in: tracks)
+    check(neighbors.first?.track.id == "same" || neighbors.first?.track.id == "lift", "smart neighbors prefer plausible candidates")
+    check(!neighbors.contains { $0.track.id == "missing" }, "missing bpm/key excluded from default neighbors")
+
+    let routes = SmartMixEngine.bridgeRoutes(from: "anchor", to: "weak", in: tracks)
+    check(routes.allSatisfy { Set($0.tracks.map(\.id)).count == $0.tracks.count }, "bridge routes do not repeat tracks")
+    check(routes.count <= SmartMixEngine.bridgeRouteLimit, "bridge route limit")
+
+    var draft = SetaDraft(trackIds: ["anchor", "weak"], sortMode: .manual)
+    let weakLinks = SmartMixEngine.draftWeakLinks(draft: draft, tracks: tracks)
+    check(weakLinks.count == 1, "draft analyzer flags weak link")
+    check(weakLinks[0].suggestions.contains { $0.kind == .insertBridge }, "draft analyzer suggests insert bridge")
+
+    draft.reorderTrackIds(["anchor", "same"])
+    check(SmartMixEngine.draftWeakLinks(draft: draft, tracks: tracks).isEmpty, "draft analyzer leaves strong link alone")
+}
+
 do {
     try decodesCurrentLibraryContract()
     try validationFindsContractIssues()
@@ -547,6 +618,7 @@ do {
     try uiGeometryChecks()
     try rekordboxPlaylistImport()
     try trackOverrideHelpers()
+    try smartJourneyChecks()
     try smokeRealLibrary()
     print("SetaMacChecks: OK")
 } catch {
