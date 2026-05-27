@@ -424,6 +424,29 @@ func rekordboxPlaylistImport() throws {
     let match = RekordboxPlaylistImport.matchPaths(playlists[0].paths + ["/nope.wav"], in: library.tracks)
     check(match.matchedTrackIds == ["one", "two"], "path match order")
     check(match.skippedCount == 1, "path skip missing")
+
+    let orderJSON = """
+    {
+      "track_count": 3,
+      "tracks": [
+        { "id": "c", "path": "/c.wav", "artist": "A", "title": "C", "source": "tracks" },
+        { "id": "a", "path": "/a.wav", "artist": "A", "title": "A", "source": "tracks" },
+        { "id": "b", "path": "/b.wav", "artist": "A", "title": "B", "source": "tracks" }
+      ],
+      "edges": []
+    }
+    """
+    let orderLibrary = try SetaLibrary.decode(from: Data(orderJSON.utf8))
+    let ordered = RekordboxPlaylistImport.matchPaths(
+        ["/c.wav", "/a.wav", "/b.wav"],
+        in: orderLibrary.tracks
+    )
+    check(ordered.matchedTrackIds == ["c", "a", "b"], "import preserves playlist order")
+
+    let polluted = Data("{}".utf8) + Data("""
+    {"playlists":[{"name":"Warmup","paths":["/tracks/Artist - One.wav"]}]}
+    """.utf8)
+    check(RekordboxLibraryBridge.playlistCount(inProcessOutput: polluted) == 1, "polluted stdout json")
 }
 
 do {

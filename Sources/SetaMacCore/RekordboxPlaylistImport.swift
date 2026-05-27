@@ -1,6 +1,6 @@
 import Foundation
 
-public struct PlaylistImportCandidate: Equatable, Identifiable {
+public struct PlaylistImportCandidate: Equatable, Identifiable, Sendable {
     public var id: String { name }
     public let name: String
     public let paths: [String]
@@ -21,6 +21,20 @@ public struct PlaylistImportResult: Equatable {
 }
 
 public enum RekordboxPlaylistImport {
+    public static func matchedCounts(
+        for candidates: [PlaylistImportCandidate],
+        in tracks: [SetaTrack]
+    ) -> [Int] {
+        let matcher = LibraryTrackMatcher(tracks: tracks)
+        return candidates.map { candidate in
+            candidate.paths.reduce(into: 0) { count, path in
+                if matcher.trackId(for: path) != nil {
+                    count += 1
+                }
+            }
+        }
+    }
+
     public static func matchPaths(_ paths: [String], in tracks: [SetaTrack]) -> PlaylistImportResult {
         let matcher = LibraryTrackMatcher(tracks: tracks)
         var matched: [String] = []
@@ -217,7 +231,7 @@ private final class RekordboxXMLParserDelegate: NSObject, XMLParserDelegate {
 }
 
 public enum RekordboxLibraryBridge {
-    public struct LoadResult: Equatable {
+    public struct LoadResult: Equatable, Sendable {
         public let playlists: [PlaylistImportCandidate]
         public let message: String?
 
@@ -252,37 +266,95 @@ public enum RekordboxLibraryBridge {
         }
 
         let process = Process()
-        let pipe = Pipe()
+        let stdoutPipe = Pipe()
+        let stderrPipe = Pipe()
         process.executableURL = python
         process.arguments = [script.path]
         process.currentDirectoryURL = scannerRoot
-        process.standardOutput = pipe
-        process.standardError = pipe
+        process.standardOutput = stdoutPipe
+        process.standardError = stderrPipe
+
+        let stdoutCollector = ProcessOutputCollector()
+        let stderrCollector = ProcessOutputCollector()
+        stdoutCollector.startReading(stdoutPipe.fileHandleForReading)
+        stderrCollector.startReading(stderrPipe.fileHandleForReading)
 
         do {
             try process.run()
-            process.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            guard process.terminationStatus == 0,
-                  let payload = try? JSONDecoder().decode(RekordboxPayload.self, from: data) else {
-                let output = String(data: data, encoding: .utf8) ?? ""
-                return LoadResult(
-                    playlists: [],
-                    message: output.isEmpty
-                        ? "Could not read Rekordbox library."
-                        : output.trimmingCharacters(in: .whitespacesAndNewlines)
-                )
-            }
-            let playlists = payload.playlists
-                .filter { !$0.paths.isEmpty }
-                .map { PlaylistImportCandidate(name: $0.name, paths: $0.paths) }
-            if playlists.isEmpty {
-                return LoadResult(playlists: [], message: "No Rekordbox playlists with tracks found.")
-            }
-            return LoadResult(playlists: playlists)
         } catch {
+            stdoutCollector.waitForOutput()
+            stderrCollector.waitForOutput()
             return LoadResult(playlists: [], message: error.localizedDescription)
         }
+
+        let finished = DispatchSemaphore(value: 0)
+        DispatchQueue.global(qos: .userInitiated).async {
+            process.waitUntilExit()
+            finished.signal()
+        }
+        guard finished.wait(timeout: .now() + 20) == .success else {
+            process.terminate()
+            stdoutCollector.waitForOutput()
+            stderrCollector.waitForOutput()
+            return LoadResult(
+                playlists: [],
+                message: "Reading Rekordbox timed out. Quit Rekordbox and try again, or export M3U."
+            )
+        }
+        stdoutCollector.waitForOutput()
+        stderrCollector.waitForOutput()
+
+        let stdout = stdoutCollector.output
+        let stderr = String(data: stderrCollector.output, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        guard process.terminationStatus == 0,
+              let payload = decodePayload(from: stdout) else {
+            if !stderr.isEmpty {
+                return LoadResult(playlists: [], message: friendlyProcessMessage(stderr))
+            }
+            return LoadResult(
+                playlists: [],
+                message: "Could not read Rekordbox library. Quit Rekordbox and try again, or export M3U."
+            )
+        }
+        let playlists = payload.playlists
+            .filter { !$0.paths.isEmpty }
+            .map { PlaylistImportCandidate(name: $0.name, paths: $0.paths) }
+        if playlists.isEmpty {
+            return LoadResult(playlists: [], message: "No Rekordbox playlists with tracks found.")
+        }
+        return LoadResult(playlists: playlists)
+    }
+
+    public static func playlistCount(inProcessOutput data: Data) -> Int? {
+        decodePayloadData(from: data)?.playlists.count
+    }
+
+    private static func decodePayload(from data: Data) -> RekordboxPayload? {
+        decodePayloadData(from: data)
+    }
+
+    private static func decodePayloadData(from data: Data) -> RekordboxPayload? {
+        if let payload = try? JSONDecoder().decode(RekordboxPayload.self, from: data) {
+            return payload
+        }
+        guard let text = String(data: data, encoding: .utf8),
+              let start = text.range(of: "{\"playlists\"")?.lowerBound else {
+            return nil
+        }
+        let json = String(text[start...])
+        return try? JSONDecoder().decode(RekordboxPayload.self, from: Data(json.utf8))
+    }
+
+    private static func friendlyProcessMessage(_ stderr: String) -> String {
+        if stderr.localizedCaseInsensitiveContains("Rekordbox is running") {
+            return "Rekordbox is open. Quit Rekordbox and try again, or export M3U."
+        }
+        if stderr.count > 180 {
+            return String(stderr.prefix(180)) + "…"
+        }
+        return stderr
     }
 
     private struct RekordboxPayload: Decodable {
@@ -293,4 +365,23 @@ public enum RekordboxLibraryBridge {
 
         let playlists: [Entry]
     }
+}
+
+private final class ProcessOutputCollector: @unchecked Sendable {
+    private var data = Data()
+    private let group = DispatchGroup()
+
+    func startReading(_ handle: FileHandle) {
+        group.enter()
+        DispatchQueue.global(qos: .userInitiated).async {
+            self.data = handle.readDataToEndOfFile()
+            self.group.leave()
+        }
+    }
+
+    func waitForOutput() {
+        group.wait()
+    }
+
+    var output: Data { data }
 }

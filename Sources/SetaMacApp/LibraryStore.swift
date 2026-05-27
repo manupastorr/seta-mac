@@ -37,7 +37,9 @@ final class LibraryStore: ObservableObject {
     @Published var energyOverrides: [String: Double] = [:]
     @Published var showingRekordboxImport = false
     @Published var rekordboxImportCandidates: [PlaylistImportCandidate] = []
+    @Published var rekordboxImportMatchedCounts: [Int] = []
     @Published var rekordboxImportMessage: String?
+    @Published var isLoadingRekordboxImport = false
     @Published var showingRekordboxFileImporter = false
 
     let player = AudioPlayerController()
@@ -380,35 +382,69 @@ final class LibraryStore: ObservableObject {
     }
 
     func beginRekordboxImport() {
-        let root = settings.setaScannerRoot.map { URL(fileURLWithPath: $0) }
-        let result = RekordboxLibraryBridge.loadPlaylists(scannerRoot: root)
-        rekordboxImportCandidates = result.playlists
-        rekordboxImportMessage = result.message
         showingRekordboxImport = true
+        rekordboxImportCandidates = []
+        rekordboxImportMatchedCounts = []
+        rekordboxImportMessage = nil
+        isLoadingRekordboxImport = true
+
+        let root = settings.setaScannerRoot.map { URL(fileURLWithPath: $0) }
+        let tracks = library?.tracks ?? []
+
+        Task {
+            let result = await Task.detached(priority: .userInitiated) {
+                RekordboxLibraryBridge.loadPlaylists(scannerRoot: root)
+            }.value
+            let counts = RekordboxPlaylistImport.matchedCounts(for: result.playlists, in: tracks)
+            rekordboxImportCandidates = result.playlists
+            rekordboxImportMatchedCounts = counts
+            rekordboxImportMessage = result.message
+            isLoadingRekordboxImport = false
+        }
     }
 
     func importRekordboxFile(url: URL) {
-        do {
-            let candidates: [PlaylistImportCandidate]
-            let ext = url.pathExtension.lowercased()
-            if ext == "xml" {
-                candidates = try RekordboxPlaylistImport.parseRekordboxXML(at: url)
-            } else {
-                candidates = [try RekordboxPlaylistImport.parseM3U(at: url)]
-            }
-            guard !candidates.isEmpty else {
-                statusMessage = "No playlists found in that file."
+        showingRekordboxImport = true
+        isLoadingRekordboxImport = true
+        rekordboxImportCandidates = []
+        rekordboxImportMatchedCounts = []
+        rekordboxImportMessage = nil
+
+        let tracks = library?.tracks ?? []
+        let accessed = url.startAccessingSecurityScopedResource()
+
+        Task {
+            let outcome: (candidates: [PlaylistImportCandidate], message: String?) = await Task.detached(
+                priority: .userInitiated
+            ) {
+                defer {
+                    if accessed {
+                        url.stopAccessingSecurityScopedResource()
+                    }
+                }
+                do {
+                    let ext = url.pathExtension.lowercased()
+                    if ext == "xml" {
+                        return (try RekordboxPlaylistImport.parseRekordboxXML(at: url), nil)
+                    }
+                    return ([try RekordboxPlaylistImport.parseM3U(at: url)], nil)
+                } catch {
+                    return ([], "Could not read playlist file.")
+                }
+            }.value
+
+            isLoadingRekordboxImport = false
+            guard !outcome.candidates.isEmpty else {
+                showingRekordboxImport = false
+                statusMessage = outcome.message ?? "No playlists found in that file."
                 return
             }
-            if candidates.count == 1 {
-                importRekordboxCandidate(candidates[0])
-            } else {
-                rekordboxImportCandidates = candidates
-                rekordboxImportMessage = nil
-                showingRekordboxImport = true
-            }
-        } catch {
-            statusMessage = "Could not read playlist file."
+            rekordboxImportCandidates = outcome.candidates
+            rekordboxImportMatchedCounts = RekordboxPlaylistImport.matchedCounts(
+                for: outcome.candidates,
+                in: tracks
+            )
+            rekordboxImportMessage = outcome.message
         }
     }
 
@@ -441,9 +477,9 @@ final class LibraryStore: ObservableObject {
         }
     }
 
-    func matchedCount(for candidate: PlaylistImportCandidate) -> Int {
-        guard let library else { return 0 }
-        return RekordboxPlaylistImport.matchPaths(candidate.paths, in: library.tracks).matchedCount
+    func rekordboxMatchedCount(at index: Int) -> Int {
+        guard rekordboxImportMatchedCounts.indices.contains(index) else { return 0 }
+        return rekordboxImportMatchedCounts[index]
     }
 
     func setNeighborAnchor(_ trackId: String) {

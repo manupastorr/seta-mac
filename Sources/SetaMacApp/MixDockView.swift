@@ -72,10 +72,14 @@ struct MixDockView: View {
 
                 if store.mixDockTab == .neighbors {
                     NeighborsPane(store: store)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 } else {
                     DraftPane(store: store)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .clipped()
         }
         .frame(maxHeight: .infinity, alignment: .top)
         .onChange(of: store.mixDockTab) { _, _ in
@@ -180,6 +184,7 @@ struct NeighborsPane: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
 
@@ -204,11 +209,15 @@ struct DraftPane: View {
                 draftSortChip("BPM", .bpm)
                 draftSortChip("Manual", .manual)
             }
-            HStack(spacing: 5) {
-                SetaSecondaryButton(title: "Play draft") { store.playDraftFromStart() }
-                SetaSecondaryButton(title: "Import Rekordbox") { store.beginRekordboxImport() }
-                SetaSecondaryButton(title: "Export M3U") { store.exportDraftM3U() }
-                SetaSecondaryButton(title: "Copy list") { store.copyDraftListToPasteboard() }
+            VStack(spacing: 5) {
+                HStack(spacing: 5) {
+                    SetaSecondaryButton(title: "Play draft", expand: true) { store.playDraftFromStart() }
+                    SetaSecondaryButton(title: "Import Rekordbox", expand: true) { store.beginRekordboxImport() }
+                }
+                HStack(spacing: 5) {
+                    SetaSecondaryButton(title: "Export M3U", expand: true) { store.exportDraftM3U() }
+                    SetaSecondaryButton(title: "Copy list", expand: true) { store.copyDraftListToPasteboard() }
+                }
             }
             if !store.draftTracks.isEmpty {
                 DraftEnergyRampView(tracks: store.draftTracks)
@@ -239,8 +248,10 @@ struct DraftPane: View {
                         }
                     }
                 }
+                .frame(maxHeight: .infinity)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var draftCountLabel: String {
@@ -310,7 +321,7 @@ struct NeighborRow: View {
                         .foregroundStyle(SetaTheme.muted)
                         .lineLimit(1)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
 
                 NeighborTrackMetaColumn(
                     track: track,
@@ -401,12 +412,13 @@ struct DraftTrackRow: View {
                                 .foregroundStyle(SetaTheme.muted)
                                 .lineLimit(1)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
 
                         DraftTrackMetaColumn(track: track)
                     }
                 }
                 .buttonStyle(.plain)
+                .frame(minWidth: 0, maxWidth: .infinity)
 
                 Button(action: onRemove) {
                     Text("×")

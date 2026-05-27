@@ -155,6 +155,7 @@ struct SetaIconChip: View {
 
 struct SetaSecondaryButton: View {
     let title: String
+    var expand: Bool = false
     var action: () -> Void
 
     var body: some View {
@@ -163,7 +164,9 @@ struct SetaSecondaryButton: View {
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(SetaTheme.text)
                 .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: expand ? .infinity : nil)
+                .fixedSize(horizontal: !expand, vertical: false)
                 .padding(.horizontal, 9)
                 .padding(.vertical, 6)
                 .background(SetaTheme.panel)
