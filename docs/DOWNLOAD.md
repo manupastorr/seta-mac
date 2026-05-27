@@ -1,38 +1,40 @@
 # Download SetaMac
 
-Native macOS app for browsing a DJ library on a **BPM × energy** map. Works with your own folders on your Mac — nothing is uploaded.
+Native macOS app for browsing a DJ library on a **BPM × energy** map. It works with folders on your Mac; nothing is uploaded.
 
-**Latest release:** [GitHub Releases](https://github.com/manupastorr/seta-mac/releases) — download `SetaMac-<version>-macos14.zip`.
+**Latest release:** [SetaMac 0.2.0](https://github.com/manupastorr/seta-mac/releases/tag/v0.2.0) — download `SetaMac-0.2.0-macos14.zip`.
 
 | Requirement | Detail |
 |-------------|--------|
 | macOS | 14+ |
 | Scanner | [seta](https://github.com/manupastorr/seta) (Python, for **Rescan**) |
-| Audio | `.wav`, `.aiff`, `.flac`, `.mp3` in folders you add |
+| Music files | `.wav`, `.aiff`, `.flac`, `.mp3` in folders you add |
+
+![SetaMac demo](media/setamac-demo.gif)
 
 ## Install
 
-1. Download the zip from [Releases](https://github.com/manupastorr/seta-mac/releases).
+1. Download `SetaMac-0.2.0-macos14.zip` from [Releases](https://github.com/manupastorr/seta-mac/releases/tag/v0.2.0).
 2. Unzip and move **SetaMac.app** to Applications.
-3. **First launch:** right-click the app → **Open** → **Open** (unsigned build; macOS will warn once).
-4. Clone the scanner once:
+3. First launch: right-click **SetaMac.app** → **Open** → **Open**.
+4. Install the scanner once if you want to use **Rescan library**:
 
 ```bash
 git clone https://github.com/manupastorr/seta.git
-cd seta && ./start.sh
+cd seta
+./start.sh
 ```
 
-5. In SetaMac: **Library → Library Folders…** → add **Library** (curated) and **Incoming** (intake) folders → **Rescan library**.
+5. In SetaMac: **Library → Library Folders…** → add your music folders.
+6. Click **Rescan library** after adding or changing folders.
 
-Removing a folder or track in Seta does **not** delete your audio files.
+Removing a folder or track in SetaMac does **not** delete your audio files.
 
 ## Screenshots
 
-GitHub does not show SVG images in Markdown — these are PNG captures from the app.
-
-| Map | Library folders | Player |
-|-----|-----------------|--------|
-| ![BPM × energy map](screenshots/01-map.png) | ![Folder setup](screenshots/02-folders.png) | ![Player dock](screenshots/03-player.png) |
+| Map overview | Mix candidates |
+|--------------|----------------|
+| ![BPM × energy map](screenshots/01-map-overview.png) | ![Mix candidates and Camelot wheel](screenshots/02-mix-candidates.png) |
 
 Re-capture: `./scripts/capture-screenshots.sh` (Terminal needs Accessibility in System Settings).
 

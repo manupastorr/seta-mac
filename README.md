@@ -1,19 +1,28 @@
 # SetaMac
 
-Native macOS app for Seta — browse your library on a **BPM × energy** map with Camelot mix hints and playback.
+Native macOS app for browsing a DJ library on a **BPM × energy** map, with Camelot mix hints, draft building, and playback.
 
 **[Download & install](docs/DOWNLOAD.md)** · [Releases](https://github.com/manupastorr/seta-mac/releases) · Scanner: [seta](https://github.com/manupastorr/seta) · License: [MIT](LICENSE)
 
+![SetaMac demo](docs/media/setamac-demo.gif)
+
 ## Quick install
 
-1. Download `SetaMac-*-macos14.zip` from [Releases](https://github.com/manupastorr/seta-mac/releases).
-2. Unzip → move **SetaMac.app** to Applications → **right-click → Open** the first time.
-3. Clone [seta](https://github.com/manupastorr/seta) and run `./start.sh` once (needed for **Rescan**).
-4. In the app: **Library → Library Folders…** → add folders → **Rescan library**.
+1. Download `SetaMac-0.2.0-macos14.zip` from [Releases](https://github.com/manupastorr/seta-mac/releases).
+2. Unzip it and move **SetaMac.app** to Applications.
+3. First launch: right-click **SetaMac.app** → **Open**.
+4. In SetaMac: **Library → Library Folders…** → add your music folders.
+5. For **Rescan library**, install the scanner once:
 
-![SetaMac map](docs/screenshots/01-map.png)
+```bash
+git clone https://github.com/manupastorr/seta.git
+cd seta
+./start.sh
+```
 
-Details and screenshots: **[docs/DOWNLOAD.md](docs/DOWNLOAD.md)**.
+![SetaMac map overview](docs/screenshots/01-map-overview.png)
+
+Full install guide and screenshots: **[docs/DOWNLOAD.md](docs/DOWNLOAD.md)**.
 
 ## Versioning
 
@@ -23,7 +32,7 @@ Details and screenshots: **[docs/DOWNLOAD.md](docs/DOWNLOAD.md)**.
 ```bash
 # Maintainer: bump VERSION, update CHANGELOG, then:
 ./scripts/make-release.sh
-gh release create v0.2.0 dist/SetaMac-0.2.0-macos14.zip --title "SetaMac 0.2.0" --notes "See CHANGELOG.md"
+gh release create v0.2.0 dist/SetaMac-0.2.0-macos14.zip --title "SetaMac 0.2.0" --notes-file CHANGELOG.md
 ```
 
 ## Develop
@@ -40,3 +49,4 @@ Optional signing: `./scripts/sign-app.sh` and `./scripts/notarize-app.sh` (Apple
 
 - Reads `library.json` from the Python scanner; does not move or rename your files.
 - Manual BPM/key/energy overrides stay in local app settings, not in `library.json`.
+- Removing a folder or track inside SetaMac does not delete audio files.
