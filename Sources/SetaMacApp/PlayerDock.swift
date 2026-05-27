@@ -25,7 +25,7 @@ struct PlayerDock: View {
                     transportButton("▶|") { store.playRelative(step: 1) }
                         .disabled(store.playQueue.count <= 1)
                     transportButton("+") { store.addSelectedToDraft() }
-                        .help("Add to draft (a)")
+                        .help("Add to setlist (a)")
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -201,7 +201,7 @@ private struct PlayerShortcutHints: View {
                 SetaKbd(text: "a")
                 Text("add ·")
                 SetaKbd(text: "d")
-                Text("draft")
+                Text("setlist")
             }
             HStack(spacing: 4) {
                 SetaKbd(text: "?")
@@ -227,11 +227,11 @@ struct ShortcutsHelpView: View {
         ("Space", "Play / pause"),
         ("← →", "Previous / next track"),
         ("Shift ← →", "Seek ±10 seconds"),
-        ("n", "Toggle neighbor queue"),
-        ("a", "Add selected track to draft"),
-        ("d", "Open draft panel"),
-        ("m", "Open neighbors panel"),
-        ("k / z", "Toggle keys / zones legends"),
+        ("n", "Toggle matches queue"),
+        ("a", "Add selected track to setlist"),
+        ("d", "Open setlist panel"),
+        ("m", "Open matches panel"),
+        ("k / z", "Toggle keys / set zones legends"),
         ("r", "Reset map zoom"),
         ("?", "Show this help")
     ]

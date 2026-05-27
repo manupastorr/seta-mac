@@ -486,7 +486,7 @@ final class LibraryStore: ObservableObject {
         let text = draft.exportText(from: library.tracks)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
-        statusMessage = "Draft copied."
+        statusMessage = "Setlist copied."
     }
 
     func beginRekordboxImport() {

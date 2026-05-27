@@ -19,7 +19,7 @@ cd ../seta-mac
 - [ ] First launch (no folders configured) opens **Library Folders…**.
 - [ ] Add multiple Library and Incoming folders; subfolders appear after rescan.
 - [ ] Remove a folder from the list; rescan drops its tracks from the map.
-- [ ] **Remove from Seta…** on a neighbor row hides the track without deleting the file.
+- [ ] **Remove from Seta…** on a matches row hides the track without deleting the file.
 - [ ] Hidden tracks can be restored from **Library Folders…**, then rescan.
 
 ## Core Workflow
@@ -27,8 +27,8 @@ cd ../seta-mac
 - [ ] App auto-loads `library.json` when available.
 - [ ] Player dock starts idle with `Nothing playing`; no track auto-plays on launch.
 - [ ] Toolbar open/rescan works.
-- [ ] Search, source, genre, BPM, Camelot, draft-only, and set-zone filters work.
-- [ ] Map selection and neighbor highlighting work.
+- [ ] Search, source, genre, BPM, Camelot, setlist-only, and set-zone filters work.
+- [ ] Map selection and matches highlighting work.
 - [ ] Selecting a track shows BPM, Key, and Intensity controls in the mix dock; each `Auto` button clears that manual override.
 - [ ] Player dock plays local audio, seeks via waveform, and shows elapsed/total time.
 - [ ] Top filter bar does not wrap chip labels or clip Reset/open/rescan controls at the default window width.
@@ -40,7 +40,7 @@ cd ../seta-mac
 - [ ] Space play/pause
 - [ ] ← / → previous/next
 - [ ] Shift ← / → seek ±10s
-- [ ] `n` neighbor queue, `a` add draft, `p` play draft, `e`/`b` draft sort, `z` zones panel, `?` help
+- [ ] `n` matches queue, `a` add setlist, `p` play setlist, `e`/`b` setlist sort, `z` set zones panel, `?` help
 - [ ] Typing shortcut letters in search or note fields enters text and does not trigger shortcuts.
 - [ ] Command-Control-F toggles native full screen.
 
@@ -52,9 +52,9 @@ cd ../seta-mac
 - [ ] When zoomed in without the loupe, hovering a node scales it up with an accent ring.
 - [ ] Starting zoom while the loupe is visible hides the loupe immediately.
 
-## Draft
+## Setlist
 
-- [ ] Multiple drafts can be created/selected/deleted.
+- [ ] Multiple setlists can be created/selected/deleted.
 - [ ] Notes, final marks, drag reorder, persistence after restart.
 - [ ] M3U/text export.
 

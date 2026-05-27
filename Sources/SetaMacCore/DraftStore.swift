@@ -22,7 +22,7 @@ public enum DraftStore {
         "draft-\(String(Int(Date().timeIntervalSince1970 * 1000), radix: 36))"
     }
 
-    public static func createDraft(name: String = "Set draft") -> SetaDraft {
+    public static func createDraft(name: String = "Setlist") -> SetaDraft {
         SetaDraft(id: newDraftId(), name: name)
     }
 
@@ -37,7 +37,7 @@ public enum DraftStore {
 
         return SetaDraft(
             id: id,
-            name: name.isEmpty ? "Set draft" : name,
+            name: name.isEmpty ? "Setlist" : name,
             trackIds: trackIds,
             finalIds: finalIds,
             notes: raw.notes,
@@ -100,7 +100,7 @@ public enum DraftStore {
 
     public static func ensureActiveDraft(
         _ store: inout DraftStoreState,
-        defaultName: String = "Set draft"
+        defaultName: String = "Setlist"
     ) -> SetaDraft {
         if let draft = activeDraft(from: store) {
             return draft

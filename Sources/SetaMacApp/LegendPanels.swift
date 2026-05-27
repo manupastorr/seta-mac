@@ -6,7 +6,7 @@ struct SetZonesLegendHeader: View {
 
     var body: some View {
         GlassPanel(cornerRadius: 10, compact: true) {
-            MixDockTabButton(shortcut: "z", title: "zones", count: store.filter.moments.count, isActive: false) {
+            MixDockTabButton(shortcut: "z", title: "set zones", count: store.filter.moments.count, isActive: false) {
                 store.momentsLegendOpen = true
             }
         }
@@ -22,7 +22,7 @@ struct SetZonesLegend: View {
                 HStack {
                     MixDockTabButton(
                         shortcut: "z",
-                        title: "zones",
+                        title: "set zones",
                         count: store.filter.moments.count,
                         isActive: store.momentsLegendOpen
                     ) {
@@ -34,7 +34,7 @@ struct SetZonesLegend: View {
                     }
                 }
                 if !store.filter.moments.isEmpty {
-                    Text("Showing selected zones")
+                    Text("Showing selected set zones")
                         .font(.system(size: 9))
                         .foregroundStyle(SetaTheme.muted)
                 }

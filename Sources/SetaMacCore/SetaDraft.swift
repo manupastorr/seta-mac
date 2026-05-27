@@ -17,7 +17,7 @@ public struct SetaDraft: Codable, Equatable {
 
     public init(
         id: String = "draft-default",
-        name: String = "Set draft",
+        name: String = "Setlist",
         trackIds: [String] = [],
         finalIds: [String] = [],
         notes: [String: String] = [:],

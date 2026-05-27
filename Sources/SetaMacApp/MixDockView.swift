@@ -10,7 +10,7 @@ struct MixDockTabs: View {
             HStack(spacing: 6) {
                 MixDockTabButton(
                     shortcut: "m",
-                    title: "neighbors",
+                    title: "matches",
                     count: store.neighborResult.list.count,
                     isActive: store.mixDockExpanded && store.mixDockTab == .neighbors
                 ) {
@@ -19,7 +19,7 @@ struct MixDockTabs: View {
                 Text("·").font(.system(size: 10)).foregroundStyle(SetaTheme.muted)
                 MixDockTabButton(
                     shortcut: "d",
-                    title: "draft",
+                    title: "setlist",
                     count: store.draft.trackIds.count,
                     isActive: store.mixDockExpanded && store.mixDockTab == .draft
                 ) {
@@ -39,7 +39,7 @@ struct MixDockView: View {
                 HStack(spacing: 6) {
                     MixDockTabButton(
                         shortcut: "m",
-                        title: "neighbors",
+                        title: "matches",
                         count: store.neighborResult.list.count,
                         isActive: store.mixDockTab == .neighbors
                     ) {
@@ -48,7 +48,7 @@ struct MixDockView: View {
                     Text("·").foregroundStyle(SetaTheme.muted)
                     MixDockTabButton(
                         shortcut: "d",
-                        title: "draft",
+                        title: "setlist",
                         count: store.draft.trackIds.count,
                         isActive: store.mixDockTab == .draft
                     ) {
@@ -230,7 +230,7 @@ struct NeighborsPane: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 2) {
                 if !store.highlightNeighbors {
-                    Text("Press n or pick Neighbors on a track.")
+                    Text("Press n or pick Matches on a track.")
                         .font(.system(size: 11))
                         .foregroundStyle(SetaTheme.muted)
                         .padding(.top, 4)
@@ -250,7 +250,7 @@ struct NeighborsPane: View {
                         onRemoveFromSeta: { store.excludeTrackFromLibrary(anchorTrack) }
                     )
                     if store.neighborResult.list.isEmpty {
-                        Text("No mixable neighbors in current filters.")
+                        Text("No matches in current filters.")
                             .font(.system(size: 11))
                             .foregroundStyle(SetaTheme.muted)
                             .padding(.top, 4)
@@ -272,7 +272,7 @@ struct NeighborsPane: View {
                         }
                     }
                 } else {
-                    Text("Select a track on the map to see mix neighbors.")
+                    Text("Select a track on the map to see matches.")
                         .font(.system(size: 11))
                         .foregroundStyle(SetaTheme.muted)
                 }
@@ -288,7 +288,7 @@ struct DraftPane: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                TextField("Set draft name", text: $store.draft.name)
+                TextField("Setlist name", text: $store.draft.name)
                     .textFieldStyle(.plain)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(SetaTheme.text)
@@ -305,7 +305,7 @@ struct DraftPane: View {
             }
             VStack(spacing: 5) {
                 HStack(spacing: 5) {
-                    SetaSecondaryButton(title: "Play draft", expand: true) { store.playDraftFromStart() }
+                    SetaSecondaryButton(title: "Play setlist", expand: true) { store.playDraftFromStart() }
                     SetaSecondaryButton(title: "Import Rekordbox", expand: true) { store.beginRekordboxImport() }
                 }
                 HStack(spacing: 5) {
@@ -317,7 +317,7 @@ struct DraftPane: View {
                 DraftEnergyRampView(tracks: store.draftTracks)
             }
             if store.draftTracks.isEmpty {
-                Text("No tracks yet — select a track and press a to add.")
+                Text("No tracks yet — select a track and press a to add to setlist.")
                     .font(.system(size: 11))
                     .foregroundStyle(SetaTheme.muted)
             } else {
@@ -436,7 +436,7 @@ struct NeighborRow: View {
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .onHover { isHovered = $0 }
         .contextMenu {
-            Button("Add to draft") { onAdd() }
+            Button("Add to setlist") { onAdd() }
             Divider()
             Button("Remove from Seta…", action: onRemoveFromSeta)
         }

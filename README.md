@@ -44,9 +44,9 @@ Removing a folder or track in Seta only updates app settings or hides the track;
 
 - Decode/validate `library.json`
 - Native track list + BPM x energy map
-- Set-zone filters/overlays, Camelot, genre, source, BPM, draft-only filters
+- Set-zone filters/overlays, Camelot, genre, source, BPM, setlist-only filters
 - Neighbor queue + play queue navigation
-- Drafts: multiple drafts, notes, drag reorder, final marks, persistence, export
+- Setlists: multiple setlists, notes, drag reorder, final marks, persistence, export
 - Player dock with waveform seek, time display, keyboard shortcuts
 - Effective energy parity with the web app, including local manual BPM, key, and intensity overrides
 - Rescan library via the existing Python scanner (`scan_library.py`)

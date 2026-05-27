@@ -129,7 +129,7 @@ struct FilterBarView: View {
                 }
                 SetaIconChip(
                     systemImage: "list.star",
-                    help: "Draft only",
+                    help: "Setlist only",
                     isActive: store.filter.draftOnly,
                     isDisabled: store.draft.trackIds.isEmpty
                 ) {
@@ -152,7 +152,7 @@ struct FilterBarView: View {
                     store.filter.draftOnly = false
                     store.syncPlayQueue()
                 }
-                SetaChip(title: "Draft only", isActive: store.filter.draftOnly, isDisabled: store.draft.trackIds.isEmpty) {
+                SetaChip(title: "Setlist only", isActive: store.filter.draftOnly, isDisabled: store.draft.trackIds.isEmpty) {
                     store.filter.draftOnly.toggle()
                     store.syncPlayQueue()
                 }

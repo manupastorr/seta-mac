@@ -92,7 +92,7 @@ struct NeighborTrackMetaColumn: View {
 
             Group {
                 if inDraft {
-                    Text("draft")
+                    Text("setlist")
                         .font(.system(size: 7, weight: .semibold))
                         .textCase(.uppercase)
                         .foregroundStyle(Color(hex: "#9a6b12"))
