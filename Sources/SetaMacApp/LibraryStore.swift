@@ -44,6 +44,7 @@ final class LibraryStore: ObservableObject {
 
     let player = AudioPlayerController()
 
+    private var baseLibrary: SetaLibrary?
     private var playQueueSig = ""
     private var persistWorkItem: DispatchWorkItem?
     private var suppressPlaybackUntil = Date.distantPast
@@ -204,8 +205,10 @@ final class LibraryStore: ObservableObject {
     func load(url: URL, remember: Bool = true) {
         do {
             let data = try Data(contentsOf: url)
-            let decoded = applyingTrackOverrides(to: try SetaLibrary.decode(from: data))
-            let decodedIssues = decoded.validationIssues()
+            let decoded = try SetaLibrary.decode(from: data)
+            baseLibrary = decoded
+            let libraryWithOverrides = applyingTrackOverrides(to: decoded)
+            let decodedIssues = libraryWithOverrides.validationIssues()
             errorMessage = nil
             if remember {
                 settings.lastLibraryPath = url.path
@@ -215,13 +218,13 @@ final class LibraryStore: ObservableObject {
                 AppSettings.save(settings)
             }
             deferAfterListUpdate {
-                self.library = decoded
+                self.library = libraryWithOverrides
                 self.issues = decodedIssues
                 self.player.stop()
                 self.playingTrackID = nil
                 self.suppressPlaybackUntil = Date().addingTimeInterval(1.0)
                 if let selectedTrackID = self.selectedTrackID,
-                   decoded.tracks.contains(where: { $0.id == selectedTrackID }) == false {
+                   libraryWithOverrides.tracks.contains(where: { $0.id == selectedTrackID }) == false {
                     self.selectedTrackID = nil
                 }
                 self.syncPlayQueue()
@@ -258,8 +261,8 @@ final class LibraryStore: ObservableObject {
     }
 
     private func applyTrackOverridesToCurrentLibrary() {
-        guard let library else { return }
-        self.library = applyingTrackOverrides(to: library)
+        guard let baseLibrary else { return }
+        library = applyingTrackOverrides(to: baseLibrary)
     }
 
     private func updateTrackOverride(for trackId: String, _ mutate: (inout TrackOverride) -> Void) {

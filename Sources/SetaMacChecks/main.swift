@@ -466,6 +466,12 @@ func trackOverrideHelpers() throws {
     let migrated = TrackOverridesStorage.load(from: defaults)
     check(migrated["legacy"]?.energy == 0.66, "legacy energy migration")
     check(defaults.data(forKey: TrackOverridesStorage.storageKey) != nil, "legacy energy migrates forward")
+
+    let clearedBpm = track.applyingTrackOverride(TrackOverride(bpm: 126, energy: 0.75))
+    check(clearedBpm.bpm == 126, "bpm override applies")
+    let afterClearBpm = track.applyingTrackOverride(TrackOverride(energy: 0.75))
+    check(afterClearBpm.bpm == 120, "reapply from base after clearing bpm override")
+    check(afterClearBpm.key == "8A", "base key unchanged when only energy overridden")
 }
 
 do {
