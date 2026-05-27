@@ -31,12 +31,6 @@ struct TrackMapView: View {
     @State private var hoverLocation: CGPoint?
     @State private var isPanning = false
     @State private var canvasSize: CGSize = .zero
-    @State private var pickMenu: MapPickMenu?
-
-    private struct MapPickMenu: Equatable {
-        let candidates: [SetaTrack]
-        let screenPoint: CGPoint
-    }
 
     private var showsLoupe: Bool {
         scale <= 1.01 && offset == .zero
@@ -61,8 +55,6 @@ struct TrackMapView: View {
                     size: proxy.size,
                     displayPositions: displayPositions
                 )
-                .scaleEffect(scale, anchor: .center)
-                .offset(offset)
 
                 axisOverlay(layout: layout, origin: origin)
 
@@ -90,22 +82,6 @@ struct TrackMapView: View {
                     )
                     tooltipOverlay(for: hovered, anchor: anchor, canvasSize: proxy.size)
                 }
-
-                if let pickMenu {
-                    MapPickDisambiguationView(
-                        candidates: pickMenu.candidates,
-                        anchor: pickMenu.screenPoint,
-                        canvasSize: proxy.size,
-                        trackOverrides: trackOverrides,
-                        onSelect: { trackID in
-                            self.pickMenu = nil
-                            selectedTrackID = trackID
-                            onPlayTrack?(trackID)
-                        },
-                        onDismiss: { self.pickMenu = nil }
-                    )
-                    .zIndex(8)
-                }
             }
             .background(SetaTheme.background)
             .onAppear { canvasSize = proxy.size }
@@ -118,30 +94,23 @@ struct TrackMapView: View {
                     .onEnded { value in
                         guard hypot(value.translation.width, value.translation.height) < 6 else { return }
                         let location = untransformedCanvasPoint(screen: value.location, canvasSize: proxy.size)
-                        let pickRadius = clickPickRadius
-                        let nearby = layout.tracksNear(
+                        if let track = layout.nearestTrack(
                             to: location,
                             tracks: tracks,
-                            pickRadius: pickRadius,
+                            pickRadius: clickPickRadius,
                             displayPositions: displayPositions
-                        )
-                        switch nearby.count {
-                        case 0:
-                            pickMenu = nil
+                        ) {
+                            selectedTrackID = track.id
+                            onPlayTrack?(track.id)
+                        } else {
                             hoveredTrackID = nil
-                        case 1:
-                            pickMenu = nil
-                            selectedTrackID = nearby[0].id
-                            onPlayTrack?(nearby[0].id)
-                        default:
-                            pickMenu = MapPickMenu(candidates: nearby, screenPoint: value.location)
                         }
                     }
             )
             .onContinuousHover { phase in
                 switch phase {
                 case .active(let location):
-                    guard !isPanning, pickMenu == nil else {
+                    guard !isPanning else {
                         hoveredTrackID = nil
                         hoverLocation = nil
                         return
@@ -210,7 +179,6 @@ struct TrackMapView: View {
                 guard scale > 1.01 else { return }
                 isPanning = true
                 clearHover()
-                pickMenu = nil
                 offset = CGSize(
                     width: panBase.width + value.translation.width,
                     height: panBase.height + value.translation.height
@@ -228,7 +196,6 @@ struct TrackMapView: View {
         offset = .zero
         panBase = .zero
         isPanning = false
-        pickMenu = nil
         clearHover()
     }
 
@@ -273,8 +240,8 @@ struct TrackMapView: View {
         size: CGSize,
         displayPositions: [String: CGPoint]
     ) -> some View {
-        Canvas { context, _ in
-            context.translateBy(x: origin.x, y: origin.y)
+        Canvas { context, size in
+            context.concatenate(mapContentTransform(canvasSize: size, origin: origin))
             drawGrid(context: &context, layout: layout)
             if showSetZoneOverlay {
                 drawSetMoments(context: &context, layout: layout)
@@ -380,6 +347,17 @@ struct TrackMapView: View {
             x: center.x + (screen.x - offset.width - center.x) / scale,
             y: center.y + (screen.y - offset.height - center.y) / scale
         )
+    }
+
+    private func mapContentTransform(canvasSize: CGSize, origin: CGPoint) -> CGAffineTransform {
+        let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+        var transform = CGAffineTransform.identity
+        transform = transform.translatedBy(x: offset.width, y: offset.height)
+        transform = transform.translatedBy(x: center.x, y: center.y)
+        transform = transform.scaledBy(x: scale, y: scale)
+        transform = transform.translatedBy(x: -center.x, y: -center.y)
+        transform = transform.translatedBy(x: origin.x, y: origin.y)
+        return transform
     }
 
     private func drawGrid(context: inout GraphicsContext, layout: MapPlotLayout) {
@@ -543,104 +521,5 @@ struct TrackMapView: View {
                 lineWidth: 1.25
             )
         }
-    }
-}
-
-private struct MapPickDisambiguationView: View {
-    let candidates: [SetaTrack]
-    let anchor: CGPoint
-    let canvasSize: CGSize
-    let trackOverrides: [String: TrackOverride]
-    let onSelect: (String) -> Void
-    let onDismiss: () -> Void
-
-    private let menuWidth: CGFloat = 280
-    private let rowHeight: CGFloat = 44
-    private let maxVisibleRows = 8
-
-    var body: some View {
-        ZStack(alignment: .topLeading) {
-            Color.black.opacity(0.001)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .onTapGesture(perform: onDismiss)
-
-            let visible = Array(candidates.prefix(maxVisibleRows))
-            let menuHeight = min(CGFloat(visible.count), CGFloat(maxVisibleRows)) * rowHeight + 36
-
-            VStack(alignment: .leading, spacing: 0) {
-                Text("\(candidates.count) tracks here")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(SetaTheme.muted)
-                    .padding(.horizontal, 12)
-                    .padding(.top, 10)
-                    .padding(.bottom, 6)
-
-                ScrollView {
-                    VStack(spacing: 0) {
-                        ForEach(visible) { track in
-                            Button {
-                                onSelect(track.id)
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Circle()
-                                        .fill(Color(hex: Camelot.colorHex(track.key)))
-                                        .frame(width: 10, height: 10)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(track.displayTitle)
-                                            .font(.system(size: 12, weight: .medium))
-                                            .foregroundStyle(SetaTheme.text)
-                                            .lineLimit(1)
-                                        Text(track.displayArtist)
-                                            .font(.system(size: 10))
-                                            .foregroundStyle(SetaTheme.muted)
-                                            .lineLimit(1)
-                                    }
-                                    Spacer(minLength: 0)
-                                    if let key = track.key {
-                                        Text(key)
-                                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                                            .foregroundStyle(SetaTheme.muted)
-                                    }
-                                }
-                                .padding(.horizontal, 12)
-                                .frame(height: rowHeight, alignment: .leading)
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-                .frame(maxHeight: rowHeight * CGFloat(maxVisibleRows))
-
-                if candidates.count > maxVisibleRows {
-                    Text("Showing nearest \(maxVisibleRows) — zoom in or narrow filters")
-                        .font(.system(size: 9))
-                        .foregroundStyle(SetaTheme.muted)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                }
-            }
-            .frame(width: menuWidth)
-            .background(.white.opacity(0.98))
-            .overlay {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(SetaTheme.panelBorder)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .shadow(color: .black.opacity(0.14), radius: 18, y: 6)
-            .position(clampedMenuCenter(menuHeight: menuHeight))
-        }
-    }
-
-    private func clampedMenuCenter(menuHeight: CGFloat) -> CGPoint {
-        let margin: CGFloat = 12
-        var x = anchor.x + 16
-        var y = anchor.y - menuHeight / 2
-        if x + menuWidth / 2 > canvasSize.width - margin {
-            x = anchor.x - menuWidth - 16
-        }
-        x = min(max(x, menuWidth / 2 + margin), canvasSize.width - menuWidth / 2 - margin)
-        y = min(max(y + menuHeight / 2, menuHeight / 2 + margin), canvasSize.height - menuHeight / 2 - margin)
-        return CGPoint(x: x, y: y)
     }
 }
