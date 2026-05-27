@@ -32,6 +32,8 @@ struct TrackMapView: View {
     @State private var hoverLocation: CGPoint?
     @State private var isPanning = false
     @State private var canvasSize: CGSize = .zero
+    @State private var displayPositionsKey = 0
+    @State private var displayPositionsCache: [String: CGPoint] = [:]
 
     private var showsLoupe: Bool {
         scale <= 1.01 && offset == .zero
@@ -47,7 +49,8 @@ struct TrackMapView: View {
                 bottomChrome: bottomChrome,
                 energyDomain: energyDomain
             )
-            let displayPositions = layout.resolveDisplayPositions(for: tracks)
+            let cacheKey = displayPositionCacheKey(layout: layout, tracks: tracks)
+            let displayPositions = displayPositionsKey == cacheKey ? displayPositionsCache : [:]
             let origin = layout.plotOrigin(in: proxy.size)
 
             ZStack(alignment: .topLeading) {
@@ -88,6 +91,9 @@ struct TrackMapView: View {
             .background(SetaTheme.background)
             .onAppear { canvasSize = proxy.size }
             .onChange(of: proxy.size) { _, newSize in canvasSize = newSize }
+            .task(id: cacheKey) {
+                await updateDisplayPositionCache(key: cacheKey, layout: layout, tracks: tracks)
+            }
             .gesture(magnifyGesture(canvasSize: proxy.size))
             .simultaneousGesture(panGesture)
             .contentShape(Rectangle())
@@ -124,11 +130,9 @@ struct TrackMapView: View {
                         pickRadius: hoverPickRadius,
                         displayPositions: displayPositions
                     ) {
-                        hoveredTrackID = nearest.id
-                        hoverLocation = location
+                        updateHover(trackID: nearest.id, location: location)
                     } else {
-                        hoveredTrackID = nil
-                        hoverLocation = nil
+                        clearHoverIfNeeded()
                     }
                 case .ended:
                     hoveredTrackID = nil
@@ -136,6 +140,53 @@ struct TrackMapView: View {
                 }
             }
         }
+    }
+
+    private func displayPositionCacheKey(layout: MapPlotLayout, tracks: [SetaTrack]) -> Int {
+        var hasher = Hasher()
+        hasher.combine(cacheInt(layout.canvasWidth))
+        hasher.combine(cacheInt(layout.canvasHeight))
+        hasher.combine(cacheInt(layout.plotLeft))
+        hasher.combine(cacheInt(layout.plotWidth))
+        hasher.combine(cacheInt(layout.plotHeight))
+        hasher.combine(cacheInt(layout.topChrome))
+        hasher.combine(Int((layout.energyDomain.lowerBound * 1000).rounded()))
+        hasher.combine(Int((layout.energyDomain.upperBound * 1000).rounded()))
+        for track in tracks {
+            hasher.combine(track.id)
+            hasher.combine(Int(((track.bpm ?? -1) * 10).rounded()))
+            hasher.combine(Int((track.effectiveEnergy * 1000).rounded()))
+            hasher.combine(Int((track.durationSec ?? 0).rounded()))
+        }
+        return hasher.finalize()
+    }
+
+    private func cacheInt(_ value: CGFloat) -> Int {
+        Int((value * 2).rounded())
+    }
+
+    @MainActor
+    private func updateDisplayPositionCache(key: Int, layout: MapPlotLayout, tracks: [SetaTrack]) async {
+        if displayPositionsKey == key { return }
+        let resolved = await Task.detached(priority: .userInitiated) {
+            layout.resolveDisplayPositions(for: tracks)
+        }.value
+        guard !Task.isCancelled else { return }
+        displayPositionsKey = key
+        displayPositionsCache = resolved
+    }
+
+    private func updateHover(trackID: String, location: CGPoint) {
+        let moved = hoverLocation.map { hypot($0.x - location.x, $0.y - location.y) } ?? .infinity
+        guard hoveredTrackID != trackID || moved >= 4 else { return }
+        hoveredTrackID = trackID
+        hoverLocation = location
+    }
+
+    private func clearHoverIfNeeded() {
+        guard hoveredTrackID != nil || hoverLocation != nil else { return }
+        hoveredTrackID = nil
+        hoverLocation = nil
     }
 
     private var clickPickRadius: CGFloat {
@@ -251,7 +302,6 @@ struct TrackMapView: View {
             drawMixLinks(context: &context, layout: layout, displayPositions: displayPositions)
             drawTracks(context: &context, layout: layout, displayPositions: displayPositions)
         }
-        .id("\(hoveredTrackID ?? "")-\(scale)-\(offset.width)-\(offset.height)-\(tracks.count)")
         .onChange(of: resetTrigger) { _, _ in resetView() }
     }
 
