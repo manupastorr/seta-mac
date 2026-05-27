@@ -34,11 +34,11 @@ struct SetaMacApp: App {
                 Button("Seek Back 10s") { store.seekRelative(-10) }
                 Button("Seek Forward 10s") { store.seekRelative(10) }
             }
-            CommandMenu("Setlist") {
-                Button("Add Selected To Setlist") { store.addSelectedToDraft() }
-                Button("Play Setlist") { store.playDraftFromStart() }
-                Button("Sort Setlist By Energy") { store.sortDraftByEnergy() }
-                Button("Sort Setlist By BPM") { store.sortDraftByBPM() }
+            CommandMenu("Draft") {
+                Button("Add Selected To Draft") { store.addSelectedToDraft() }
+                Button("Play Draft") { store.playDraftFromStart() }
+                Button("Sort Draft By Energy") { store.sortDraftByEnergy() }
+                Button("Sort Draft By BPM") { store.sortDraftByBPM() }
             }
             CommandGroup(replacing: .help) {
                 Button("Keyboard Shortcuts") { store.showShortcutsHelp = true }

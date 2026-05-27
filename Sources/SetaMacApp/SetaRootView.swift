@@ -385,7 +385,7 @@ struct NeighborModeCue: View {
         Button {} label: {
             HStack(spacing: 4) {
                 SetaKbd(text: "n")
-                Text("matches on")
+                Text("neighbors on")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(SetaTheme.muted)
             }

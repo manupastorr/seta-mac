@@ -1,0 +1,25 @@
+SetaMac — install (unsigned build)
+Version: see VERSION file in this folder
+
+Requirements
+- macOS 14 or later (Apple Silicon or Intel)
+- Seta scanner (Python): https://github.com/manupastorr/seta
+
+1) Unzip SetaMac.app.zip and move SetaMac.app to Applications (or anywhere).
+
+2) First open (Gatekeeper)
+   Right-click SetaMac.app → Open → Open.
+   Or: xattr -cr /path/to/SetaMac.app
+
+3) Scanner (needed for Rescan)
+   git clone https://github.com/manupastorr/seta.git
+   cd seta && ./start.sh
+   Keep seta next to SetaMac, or at ~/Music/tracks/tools/seta
+
+4) In SetaMac
+   Library → Library Folders…
+   Add your Library and Incoming folders → Rescan library.
+
+Your music stays on disk. Seta only reads folders you choose.
+
+License: MIT (LICENSE file). No warranty.
