@@ -41,6 +41,8 @@ final class LibraryStore: ObservableObject {
     @Published var rekordboxImportMessage: String?
     @Published var isLoadingRekordboxImport = false
     @Published var showingRekordboxFileImporter = false
+    @Published var showingLibraryFolders = false
+    @Published var excludedTrackPaths: Set<String> = []
 
     let player = AudioPlayerController()
 
@@ -52,9 +54,14 @@ final class LibraryStore: ObservableObject {
     init() {
         restoreDraft()
         restoreTrackOverrides()
+        excludedTrackPaths = ExcludedTracksStorage.load()
         player.onFinished = { [weak self] in
             self?.playRelative(step: 1)
         }
+    }
+
+    var needsFolderSetup: Bool {
+        !settings.hasConfiguredFolders
     }
 
     func deferAfterListUpdate(_ work: @escaping @MainActor () -> Void) {
@@ -207,7 +214,7 @@ final class LibraryStore: ObservableObject {
             let data = try Data(contentsOf: url)
             let decoded = try SetaLibrary.decode(from: data)
             baseLibrary = decoded
-            let libraryWithOverrides = applyingTrackOverrides(to: decoded)
+            let libraryWithOverrides = displayedLibrary(from: decoded)
             let decodedIssues = libraryWithOverrides.validationIssues()
             errorMessage = nil
             if remember {
@@ -246,6 +253,22 @@ final class LibraryStore: ObservableObject {
         TrackOverridesStorage.save(trackOverrides)
     }
 
+    private func applyingExclusions(to library: SetaLibrary) -> SetaLibrary {
+        guard !excludedTrackPaths.isEmpty else { return library }
+        let tracks = library.tracks.filter { !excludedTrackPaths.contains($0.path) }
+        let visibleIDs = Set(tracks.map(\.id))
+        return SetaLibrary(
+            generatedAt: library.generatedAt,
+            tracksRoot: library.tracksRoot,
+            curateRoot: library.curateRoot,
+            tracksRoots: library.tracksRoots,
+            curateRoots: library.curateRoots,
+            trackCount: tracks.count,
+            tracks: tracks,
+            edges: library.edges.filter { visibleIDs.contains($0.source) && visibleIDs.contains($0.target) }
+        )
+    }
+
     private func applyingTrackOverrides(to library: SetaLibrary) -> SetaLibrary {
         let tracks = library.tracks.map { track in
             track.applyingTrackOverride(trackOverrides[track.id])
@@ -254,15 +277,28 @@ final class LibraryStore: ObservableObject {
             generatedAt: library.generatedAt,
             tracksRoot: library.tracksRoot,
             curateRoot: library.curateRoot,
+            tracksRoots: library.tracksRoots,
+            curateRoots: library.curateRoots,
             trackCount: library.trackCount,
             tracks: tracks,
             edges: library.edges
         )
     }
 
+    private func displayedLibrary(from library: SetaLibrary) -> SetaLibrary {
+        applyingTrackOverrides(to: applyingExclusions(to: library))
+    }
+
     private func applyTrackOverridesToCurrentLibrary() {
         guard let baseLibrary else { return }
-        library = applyingTrackOverrides(to: baseLibrary)
+        library = displayedLibrary(from: baseLibrary)
+    }
+
+    private func refreshDisplayedLibrary() {
+        guard let baseLibrary else { return }
+        library = displayedLibrary(from: baseLibrary)
+        issues = library?.validationIssues() ?? []
+        syncPlayQueue()
     }
 
     private func updateTrackOverride(for trackId: String, _ mutate: (inout TrackOverride) -> Void) {
@@ -287,9 +323,23 @@ final class LibraryStore: ObservableObject {
             statusMessage = "Seta scanner folder not found."
             return
         }
+        guard settings.hasConfiguredFolders else {
+            showingLibraryFolders = true
+            statusMessage = "Add library folders before scanning."
+            return
+        }
         isRescanning = true
+        let tracksRoots = settings.resolvedTracksRootPaths()
+        let curateRoots = settings.resolvedCurateRootPaths()
+        let excluded = Array(excludedTrackPaths)
         Task {
-            let result = LibraryScanner.scanLibrary(at: scannerRoot, quick: true)
+            let result = LibraryScanner.scanLibrary(
+                at: scannerRoot,
+                tracksRoots: tracksRoots,
+                curateRoots: curateRoots,
+                excludedPaths: excluded,
+                quick: true
+            )
             await MainActor.run {
                 isRescanning = false
                 if result.exitCode == 0 {
@@ -301,6 +351,70 @@ final class LibraryStore: ObservableObject {
                 }
             }
         }
+    }
+
+    func addTracksFolder(url: URL, bookmarkData: Data?) {
+        appendFolderEntry(url: url, bookmarkData: bookmarkData, curated: true)
+    }
+
+    func addCurateFolder(url: URL, bookmarkData: Data?) {
+        appendFolderEntry(url: url, bookmarkData: bookmarkData, curated: false)
+    }
+
+    private func appendFolderEntry(url: URL, bookmarkData: Data?, curated: Bool) {
+        let path = url.path
+        if curated {
+            guard !settings.tracksFolders.contains(where: { $0.path == path }) else { return }
+            settings.tracksFolders.append(makeFolderEntry(url: url, bookmarkData: bookmarkData))
+        } else {
+            guard !settings.curateFolders.contains(where: { $0.path == path }) else { return }
+            settings.curateFolders.append(makeFolderEntry(url: url, bookmarkData: bookmarkData))
+        }
+        saveSettings()
+    }
+
+    private func makeFolderEntry(url: URL, bookmarkData: Data?) -> LibraryFolderEntry {
+        LibraryFolderEntry(
+            path: url.path,
+            label: url.lastPathComponent,
+            bookmarkData: bookmarkData ?? FolderBookmarkAccess.bookmarkData(for: url)
+        )
+    }
+
+    func removeTracksFolder(id: String) {
+        settings.tracksFolders.removeAll { $0.id == id }
+        saveSettings()
+    }
+
+    func removeCurateFolder(id: String) {
+        settings.curateFolders.removeAll { $0.id == id }
+        saveSettings()
+    }
+
+    func excludeTrackFromLibrary(_ track: SetaTrack) {
+        excludedTrackPaths.insert(track.path)
+        ExcludedTracksStorage.save(excludedTrackPaths)
+        if selectedTrackID == track.id {
+            selectedTrackID = nil
+        }
+        if playingTrackID == track.id {
+            stopPlayback()
+        }
+        draft.remove(trackId: track.id)
+        persistDraftNow()
+        refreshDisplayedLibrary()
+        statusMessage = "Removed from Seta. Rescan to refresh the library file."
+    }
+
+    func restoreExcludedTrack(path: String) {
+        excludedTrackPaths.remove(path)
+        ExcludedTracksStorage.save(excludedTrackPaths)
+        refreshDisplayedLibrary()
+        statusMessage = "Track restored. Rescan to include it again."
+    }
+
+    var excludedTrackPathsSorted: [String] {
+        excludedTrackPaths.sorted()
     }
 
     func toggleSource(_ source: String) {

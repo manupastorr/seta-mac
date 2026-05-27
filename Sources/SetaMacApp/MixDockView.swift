@@ -246,7 +246,8 @@ struct NeighborsPane: View {
                         onSelect: { reanchor in
                             store.playTrackViaView(id: anchorTrack.id, reanchor: reanchor)
                         },
-                        onAdd: { store.addTrackToDraft(anchorTrack.id) }
+                        onAdd: { store.addTrackToDraft(anchorTrack.id) },
+                        onRemoveFromSeta: { store.excludeTrackFromLibrary(anchorTrack) }
                     )
                     if store.neighborResult.list.isEmpty {
                         Text("No mixable neighbors in current filters.")
@@ -265,7 +266,8 @@ struct NeighborsPane: View {
                                 onSelect: { reanchor in
                                     store.playTrackViaView(id: track.id, reanchor: reanchor)
                                 },
-                                onAdd: { store.addTrackToDraft(track.id) }
+                                onAdd: { store.addTrackToDraft(track.id) },
+                                onRemoveFromSeta: { store.excludeTrackFromLibrary(track) }
                             )
                         }
                     }
@@ -375,6 +377,7 @@ struct NeighborRow: View {
     var isQueueFocus: Bool = false
     let onSelect: (Bool) -> Void
     let onAdd: () -> Void
+    let onRemoveFromSeta: () -> Void
 
     @State private var isHovered = false
 
@@ -434,6 +437,8 @@ struct NeighborRow: View {
         .onHover { isHovered = $0 }
         .contextMenu {
             Button("Add to draft") { onAdd() }
+            Divider()
+            Button("Remove from Seta…", action: onRemoveFromSeta)
         }
     }
 }

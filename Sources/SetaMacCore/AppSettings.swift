@@ -4,18 +4,36 @@ public struct AppSettings: Codable, Equatable {
     public var lastLibraryPath: String?
     public var setaScannerRoot: String?
     public var showSetZoneOverlay: Bool
+    public var tracksFolders: [LibraryFolderEntry]
+    public var curateFolders: [LibraryFolderEntry]
 
     public init(
         lastLibraryPath: String? = nil,
         setaScannerRoot: String? = nil,
-        showSetZoneOverlay: Bool = true
+        showSetZoneOverlay: Bool = true,
+        tracksFolders: [LibraryFolderEntry] = [],
+        curateFolders: [LibraryFolderEntry] = []
     ) {
         self.lastLibraryPath = lastLibraryPath
         self.setaScannerRoot = setaScannerRoot
         self.showSetZoneOverlay = showSetZoneOverlay
+        self.tracksFolders = tracksFolders
+        self.curateFolders = curateFolders
     }
 
     public static let storageKey = "seta-mac-settings-v1"
+
+    public var hasConfiguredFolders: Bool {
+        !tracksFolders.isEmpty || !curateFolders.isEmpty
+    }
+
+    public func resolvedTracksRootPaths() -> [String] {
+        tracksFolders.compactMap { FolderBookmarkAccess.resolvedPath(for: $0) }
+    }
+
+    public func resolvedCurateRootPaths() -> [String] {
+        curateFolders.compactMap { FolderBookmarkAccess.resolvedPath(for: $0) }
+    }
 
     public static func load(from defaults: UserDefaults = .standard) -> AppSettings {
         guard let data = defaults.data(forKey: storageKey),
@@ -55,7 +73,13 @@ public enum LibraryScanner {
         }
     }
 
-    public static func scanLibrary(at scannerRoot: URL, quick: Bool = true) -> ScanResult {
+    public static func scanLibrary(
+        at scannerRoot: URL,
+        tracksRoots: [String] = [],
+        curateRoots: [String] = [],
+        excludedPaths: [String] = [],
+        quick: Bool = true
+    ) -> ScanResult {
         let python = scannerRoot.appendingPathComponent(".venv/bin/python")
         let script = scannerRoot.appendingPathComponent("scan_library.py")
         guard FileManager.default.isExecutableFile(atPath: python.path) else {
@@ -65,7 +89,12 @@ public enum LibraryScanner {
         let process = Process()
         let pipe = Pipe()
         process.executableURL = python
-        process.arguments = [script.path] + (quick ? ["--skip-edges"] : [])
+        process.arguments = [script.path] + LibraryScannerArguments.build(
+            quick: quick,
+            tracksRoots: tracksRoots,
+            curateRoots: curateRoots,
+            excludedPaths: excludedPaths
+        )
         process.currentDirectoryURL = scannerRoot
         process.standardOutput = pipe
         process.standardError = pipe

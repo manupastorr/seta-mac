@@ -31,9 +31,15 @@ struct SetaRootView: View {
             .sheet(isPresented: $store.showingRekordboxImport) {
                 RekordboxImportSheet(store: store)
             }
+            .sheet(isPresented: $store.showingLibraryFolders) {
+                LibraryFoldersSheet(store: store)
+            }
             .task {
                 if store.library == nil {
                     store.autoLoadLibraryIfPossible()
+                }
+                if store.needsFolderSetup {
+                    store.showingLibraryFolders = true
                 }
             }
             .applyKeyboardShortcuts(store: store, mapResetTrigger: $mapResetTrigger, searchFocused: $searchFocused)

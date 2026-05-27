@@ -4,6 +4,8 @@ public struct SetaLibrary: Decodable, Equatable {
     public let generatedAt: String?
     public let tracksRoot: String?
     public let curateRoot: String?
+    public let tracksRoots: [String]?
+    public let curateRoots: [String]?
     public let trackCount: Int
     public let tracks: [SetaTrack]
     public let edges: [SetaEdge]
@@ -12,6 +14,8 @@ public struct SetaLibrary: Decodable, Equatable {
         generatedAt: String? = nil,
         tracksRoot: String? = nil,
         curateRoot: String? = nil,
+        tracksRoots: [String]? = nil,
+        curateRoots: [String]? = nil,
         trackCount: Int,
         tracks: [SetaTrack],
         edges: [SetaEdge]
@@ -19,6 +23,8 @@ public struct SetaLibrary: Decodable, Equatable {
         self.generatedAt = generatedAt
         self.tracksRoot = tracksRoot
         self.curateRoot = curateRoot
+        self.tracksRoots = tracksRoots
+        self.curateRoots = curateRoots
         self.trackCount = trackCount
         self.tracks = tracks
         self.edges = edges
@@ -28,6 +34,8 @@ public struct SetaLibrary: Decodable, Equatable {
         case generatedAt = "generated_at"
         case tracksRoot = "tracks_root"
         case curateRoot = "curate_root"
+        case tracksRoots = "tracks_roots"
+        case curateRoots = "curate_roots"
         case trackCount = "track_count"
         case tracks
         case edges

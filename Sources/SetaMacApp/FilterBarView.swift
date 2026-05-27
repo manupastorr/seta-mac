@@ -26,6 +26,10 @@ struct FilterBarView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 HStack(spacing: 8) {
+                    Button { store.showingLibraryFolders = true } label: {
+                        Image(systemName: "folder.badge.gearshape")
+                    }
+                    .help("Library folders…")
                     Button { showingImporter = true } label: {
                         Image(systemName: "folder")
                     }
@@ -38,7 +42,7 @@ struct FilterBarView: View {
                         }
                     }
                     .disabled(store.isRescanning || store.scannerRootURL == nil)
-                    .help("Rescan library (pick up new tracks in To Curate)")
+                    .help("Rescan library (pick up new tracks in incoming folders)")
                 }
                 .buttonStyle(.borderless)
                 .foregroundStyle(SetaTheme.muted)
@@ -118,7 +122,7 @@ struct FilterBarView: View {
                     store.filter.draftOnly = false
                     store.syncPlayQueue()
                 }
-                SetaIconChip(systemImage: "tray.and.arrow.down", help: "Curate", isActive: store.filter.sources == ["to_curate"] && !store.filter.draftOnly) {
+                SetaIconChip(systemImage: "tray.and.arrow.down", help: "Incoming", isActive: store.filter.sources == ["to_curate"] && !store.filter.draftOnly) {
                     store.filter.sources = ["to_curate"]
                     store.filter.draftOnly = false
                     store.syncPlayQueue()
@@ -143,7 +147,7 @@ struct FilterBarView: View {
                     store.filter.draftOnly = false
                     store.syncPlayQueue()
                 }
-                SetaChip(title: "Curate", isActive: store.filter.sources == ["to_curate"] && !store.filter.draftOnly) {
+                SetaChip(title: "Incoming", isActive: store.filter.sources == ["to_curate"] && !store.filter.draftOnly) {
                     store.filter.sources = ["to_curate"]
                     store.filter.draftOnly = false
                     store.syncPlayQueue()

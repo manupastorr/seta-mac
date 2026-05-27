@@ -267,6 +267,56 @@ func setMomentsAndSettingsHelpers() throws {
     check(AppSettings.load(from: defaults).lastLibraryPath == "/tmp/library.json", "settings roundtrip")
 }
 
+func librarySourcesChecks() {
+    let args = LibraryScannerArguments.build(
+        quick: true,
+        tracksRoots: ["/tracks/a", "/tracks/b"],
+        curateRoots: ["/incoming"],
+        excludedPaths: ["/tracks/a/hide.wav"]
+    )
+    check(args.contains("--skip-edges"), "scanner args quick")
+    check(args.filter { $0 == "--tracks-root" }.count == 2, "scanner args tracks roots")
+    check(args.contains("--curate-root"), "scanner args curate root")
+    check(args.contains("--exclude-path"), "scanner args exclude path")
+
+    let defaults = UserDefaults(suiteName: "seta-mac-folder-settings-check")!
+    defaults.removePersistentDomain(forName: "seta-mac-folder-settings-check")
+    let folderSettings = AppSettings(
+        tracksFolders: [LibraryFolderEntry(path: "/tmp/tracks")],
+        curateFolders: [LibraryFolderEntry(path: "/tmp/incoming")]
+    )
+    AppSettings.save(folderSettings, to: defaults)
+    let loaded = AppSettings.load(from: defaults)
+    check(loaded.tracksFolders.count == 1, "folder settings tracks")
+    check(loaded.curateFolders.count == 1, "folder settings curate")
+    check(loaded.hasConfiguredFolders, "folder settings configured")
+
+    var excluded: Set<String> = ["/a.wav"]
+    ExcludedTracksStorage.save(excluded, to: defaults)
+    excluded = ExcludedTracksStorage.load(from: defaults)
+    check(excluded == ["/a.wav"], "excluded tracks roundtrip")
+}
+
+func decodesLibraryRootArrays() throws {
+    let json = """
+    {
+      "generated_at": "2026-01-01T00:00:00+00:00",
+      "tracks_root": "/tracks",
+      "curate_root": "/curate",
+      "tracks_roots": ["/tracks", "/more/tracks"],
+      "curate_roots": ["/curate", "/incoming"],
+      "track_count": 1,
+      "tracks": [
+        { "id": "a", "path": "/tracks/A.wav", "artist": "A", "title": "One", "source": "tracks", "genre": "House", "batch": null, "bpm": 124, "energy": 0.5, "key": "8A" }
+      ],
+      "edges": []
+    }
+    """
+    let library = try SetaLibrary.decode(from: Data(json.utf8))
+    check(library.tracksRoots?.count == 2, "tracks_roots decodes")
+    check(library.curateRoots?.count == 2, "curate_roots decodes")
+}
+
 func uiGeometryChecks() throws {
     let layout = MapPlotLayout(
         canvasSize: CGSize(width: 1200, height: 800),
@@ -482,6 +532,8 @@ do {
     try playbackHelpers()
     draftStoreRoundtrip()
     try setMomentsAndSettingsHelpers()
+    librarySourcesChecks()
+    try decodesLibraryRootArrays()
     try uiGeometryChecks()
     try rekordboxPlaylistImport()
     try trackOverrideHelpers()

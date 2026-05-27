@@ -30,6 +30,16 @@ On first launch the app auto-loads the newest available `library.json` from:
 - the sibling `../seta/library.json`
 - `~/Music/tracks/tools/seta/library.json`
 
+If no library folders are configured yet, **Library → Library Folders…** opens so you can add curated and incoming roots before rescanning.
+
+## Library folders (other Macs)
+
+1. Open **Library → Library Folders…** (or the folder-gear toolbar button).
+2. Add one or more **Library** folders (curated) and **Incoming** folders (uncurated intake). Subfolders are scanned recursively.
+3. Click **Rescan library** to run the Python scanner with your folders.
+
+Removing a folder or track in Seta only updates app settings or hides the track; it does **not** delete audio files on disk.
+
 ## Current Scope
 
 - Decode/validate `library.json`

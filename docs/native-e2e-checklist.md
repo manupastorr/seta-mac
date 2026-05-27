@@ -14,6 +14,14 @@ cd ../seta-mac
 ./scripts/build-app.sh && open dist/SetaMac.app
 ```
 
+## Library folders
+
+- [ ] First launch (no folders configured) opens **Library Folders…**.
+- [ ] Add multiple Library and Incoming folders; subfolders appear after rescan.
+- [ ] Remove a folder from the list; rescan drops its tracks from the map.
+- [ ] **Remove from Seta…** on a neighbor row hides the track without deleting the file.
+- [ ] Hidden tracks can be restored from **Library Folders…**, then rescan.
+
 ## Core Workflow
 
 - [ ] App auto-loads `library.json` when available.

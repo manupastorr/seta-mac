@@ -23,6 +23,7 @@ struct SetaMacApp: App {
                 .keyboardShortcut("f", modifiers: [.command, .control])
             }
             CommandMenu("Library") {
+                Button("Library Folders…") { store.showingLibraryFolders = true }
                 Button("Rescan Library") { store.rescanLibrary() }
                     .keyboardShortcut("r", modifiers: [.command, .shift])
             }
