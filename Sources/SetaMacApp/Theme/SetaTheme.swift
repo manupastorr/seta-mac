@@ -215,6 +215,91 @@ struct FloatingChrome<Content: View>: View {
     }
 }
 
+struct SetaSheetLayout<Content: View, Footer: View>: View {
+    let title: String
+    var subtitle: String?
+    var width: CGFloat = 540
+    var maxContentHeight: CGFloat = 380
+    @ViewBuilder var content: () -> Content
+    @ViewBuilder var footer: () -> Footer
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(SetaTheme.text)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundStyle(SetaTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 14)
+
+            Divider().opacity(0.65)
+
+            ScrollView {
+                content()
+                    .padding(20)
+            }
+            .frame(maxHeight: maxContentHeight)
+
+            Divider().opacity(0.65)
+
+            footer()
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+        }
+        .frame(width: width)
+        .background(SetaTheme.background)
+    }
+}
+
+struct SetaSheetSectionCard<Content: View>: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(SetaTheme.accent)
+                    .frame(width: 28, height: 28)
+                    .background(SetaTheme.accentSoft)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(SetaTheme.text)
+                    Text(subtitle)
+                        .font(.system(size: 11))
+                        .foregroundStyle(SetaTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+
+            content()
+        }
+        .padding(12)
+        .background(SetaTheme.panel)
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(SetaTheme.panelBorder.opacity(0.9))
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
 extension Color {
     init(hex: String) {
         let raw = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
