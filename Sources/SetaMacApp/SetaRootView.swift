@@ -1,11 +1,9 @@
 import AppKit
 import SwiftUI
 import SetaMacCore
-import UniformTypeIdentifiers
 
 struct SetaRootView: View {
     @EnvironmentObject private var store: LibraryStore
-    @State private var showingImporter = false
     @State private var mapResetTrigger = UUID()
     @State private var hoveredTrackID: String?
     @FocusState private var searchFocused: Bool
@@ -15,16 +13,6 @@ struct SetaRootView: View {
         workspace
             .frame(minWidth: SetaTheme.minWindowWidth, minHeight: SetaTheme.minWindowHeight)
             .background(SetaTheme.background)
-            .fileImporter(
-                isPresented: $showingImporter,
-                allowedContentTypes: [.json],
-                allowsMultipleSelection: false
-            ) { result in
-                if case let .success(urls) = result, let url = urls.first {
-                    _ = url.startAccessingSecurityScopedResource()
-                    store.load(url: url)
-                }
-            }
             .sheet(isPresented: $store.showShortcutsHelp) {
                 ShortcutsHelpView()
             }
@@ -76,7 +64,6 @@ struct SetaRootView: View {
                     FilterBarView(
                         store: store,
                         searchFocused: $searchFocused,
-                        showingImporter: $showingImporter,
                         mapResetTrigger: $mapResetTrigger,
                         compact: compactToolbar
                     )

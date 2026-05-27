@@ -4,7 +4,6 @@ import SetaMacCore
 struct FilterBarView: View {
     @ObservedObject var store: LibraryStore
     @FocusState.Binding var searchFocused: Bool
-    @Binding var showingImporter: Bool
     @Binding var mapResetTrigger: UUID
     var compact: Bool = false
 
@@ -30,10 +29,6 @@ struct FilterBarView: View {
                         Image(systemName: "folder.badge.gearshape")
                     }
                     .help("Library folders…")
-                    Button { showingImporter = true } label: {
-                        Image(systemName: "folder")
-                    }
-                    .help("Open library.json")
                     Button { store.rescanLibrary() } label: {
                         if compact {
                             Image(systemName: "arrow.clockwise")
