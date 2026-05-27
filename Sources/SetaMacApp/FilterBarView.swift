@@ -73,7 +73,7 @@ struct FilterBarView: View {
                 Text("Seta 🍄")
                     .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(SetaTheme.text)
-                Text("BPM × intensity · mix hints")
+                Text("Map-first set journeys")
                     .font(.system(size: 10))
                     .foregroundStyle(SetaTheme.muted)
             }

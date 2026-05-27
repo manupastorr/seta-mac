@@ -1,6 +1,6 @@
 # Download SetaMac
 
-Native macOS app for browsing a DJ library on a **BPM × energy** map. It works with folders on your Mac; nothing is uploaded.
+Local-first macOS app for building DJ set drafts from a map of your library. Start with one track, explore smart candidates and bridges, then export a draft to Rekordbox or another DJ tool. It works with folders on your Mac; nothing is uploaded.
 
 **Latest release:** [SetaMac 0.2.0](https://github.com/manupastorr/seta-mac/releases/tag/v0.2.0) — download `SetaMac-0.2.0-macos14.zip`.
 
@@ -32,9 +32,9 @@ Removing a folder or track in SetaMac does **not** delete your audio files.
 
 ## Screenshots
 
-| Map overview | Mix candidates |
+| Set journey map | Mix candidates |
 |--------------|----------------|
-| ![BPM × energy map](screenshots/01-map-overview.png) | ![Mix candidates and Camelot wheel](screenshots/02-mix-candidates.png) |
+| ![Map-first set journey view](screenshots/01-map-overview.png) | ![Mix candidates and Camelot wheel](screenshots/02-mix-candidates.png) |
 
 Re-capture: `./scripts/capture-screenshots.sh` (Terminal needs Accessibility in System Settings).
 
