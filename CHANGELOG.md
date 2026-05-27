@@ -2,7 +2,7 @@
 
 ## 0.2.0
 
-- Map: collision-aware dot layout, zoom up to 10× toward the cursor, vector redraw while zoomed, and tighter vertical layout (filter-bar top chrome, data-driven intensity range).
+- Map: collision-aware dot layout, zoom up to 10× toward the cursor, vector redraw while zoomed, and tighter vertical layout (measured filter-bar top chrome, intensity axis capped to library data).
 - Library Folders: multiple curated and incoming roots, recursive scan.
 - Rescan passes your folder list to the Python scanner.
 - Hide tracks or remove folders from Seta without deleting audio files.

@@ -8,6 +8,7 @@ struct SetaRootView: View {
     @State private var hoveredTrackID: String?
     @FocusState private var searchFocused: Bool
     @State private var isWindowFullscreen = false
+    @State private var filterBarHeight: CGFloat = SetaTheme.filterBarHeight
 
     var body: some View {
         workspace
@@ -55,6 +56,7 @@ struct SetaRootView: View {
                     energyDomain: store.energyDisplayDomain,
                     mixDockWidth: store.mixDockExpanded ? SetaTheme.mixDockWidth + 10 : 0,
                     rightChrome: mapRightChrome,
+                    topChrome: filterBarHeight + 6,
                     bottomChrome: SetaTheme.playerHeight + 10,
                     resetTrigger: mapResetTrigger,
                     trackOverrides: store.trackOverrides,
@@ -70,6 +72,9 @@ struct SetaRootView: View {
                     )
                     Spacer(minLength: 0)
                     PlayerDock(store: store)
+                }
+                .onPreferenceChange(FilterBarHeightPreferenceKey.self) { height in
+                    if height > 0 { filterBarHeight = height }
                 }
 
                 sidePanelsLayer(in: proxy.size)

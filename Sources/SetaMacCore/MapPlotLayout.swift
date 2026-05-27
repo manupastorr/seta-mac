@@ -69,10 +69,12 @@ public struct MapPlotLayout: Equatable, Sendable {
 
         let sorted = energies.sorted()
         let pHi = energyPercentile(sorted, percentile: EnergyDisplay.percentileHi)
+        let maxEnergy = sorted.last!
         var lo = energyPercentile(sorted, percentile: EnergyDisplay.percentileLo)
         let pad = max(0.02, (pHi - lo) * EnergyDisplay.padRatio)
         lo = max(EnergyDisplay.floor, lo - pad)
-        var hi = min(EnergyDisplay.top, pHi + pad)
+        // Cap the top at real library data so the plot does not reserve empty space up to 1.0.
+        var hi = min(EnergyDisplay.top, max(maxEnergy, pHi) + pad)
 
         if hi - lo < EnergyDisplay.minSpan {
             hi = min(EnergyDisplay.top, lo + EnergyDisplay.minSpan)

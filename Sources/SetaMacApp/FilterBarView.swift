@@ -1,6 +1,14 @@
 import SwiftUI
 import SetaMacCore
 
+enum FilterBarHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat { SetaTheme.filterBarHeight }
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 struct FilterBarView: View {
     @ObservedObject var store: LibraryStore
     @FocusState.Binding var searchFocused: Bool
@@ -45,6 +53,11 @@ struct FilterBarView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, compact ? 8 : 10)
+        }
+        .background {
+            GeometryReader { proxy in
+                Color.clear.preference(key: FilterBarHeightPreferenceKey.self, value: proxy.size.height)
+            }
         }
     }
 
