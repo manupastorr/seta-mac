@@ -185,8 +185,17 @@ public struct SetaTrack: Decodable, Identifiable, Equatable {
     }
 
     public func applyingManualEnergy(_ value: Double?) -> SetaTrack {
-        let manual = value.map { min(1, max(0, $0)) }
-        let effective = manual ?? [energyAuto, energyMain, energy].compactMap { $0 }.first ?? 0.5
+        applyingTrackOverride(TrackOverride(energy: value))
+    }
+
+    public func applyingTrackOverride(_ override: TrackOverride?) -> SetaTrack {
+        guard let override, !override.isEmpty else { return self }
+
+        let manualEnergy = override.energy.map { min(1, max(0, $0)) }
+        let effectiveEnergy = manualEnergy ?? [energyAuto, energyMain, energy].compactMap { $0 }.first ?? 0.5
+        let effectiveBPM = override.bpm ?? bpm
+        let effectiveKey = override.key ?? key
+
         return SetaTrack(
             id: id,
             path: path,
@@ -196,16 +205,16 @@ public struct SetaTrack: Decodable, Identifiable, Equatable {
             genre: genre,
             batch: batch,
             durationSec: durationSec,
-            bpm: bpm,
+            bpm: effectiveBPM,
             bpmRaw: bpmRaw,
             bpmOctaveCorrected: bpmOctaveCorrected,
             bpmSource: bpmSource,
             bpmConfidence: bpmConfidence,
-            key: key,
+            key: effectiveKey,
             energy: energy,
             energyAuto: energyAuto,
-            energyEffective: effective,
-            energyManual: manual,
+            energyEffective: effectiveEnergy,
+            energyManual: manualEnergy,
             energyMain: energyMain,
             energyAvg: energyAvg,
             energyPeak: energyPeak,

@@ -62,6 +62,7 @@ struct SetaRootView: View {
                     rightChrome: mapRightChrome,
                     bottomChrome: SetaTheme.playerHeight + 10,
                     resetTrigger: mapResetTrigger,
+                    trackOverrides: store.trackOverrides,
                     onPlayTrack: { store.playTrackViaView(id: $0) }
                 )
 

@@ -4,6 +4,14 @@ import SetaMacCore
 struct TrackBadgesView: View {
     let badges: [TrackPresentation.Badge]
 
+    init(badges: [TrackPresentation.Badge]) {
+        self.badges = badges
+    }
+
+    init(track: SetaTrack, override: TrackOverride? = nil) {
+        badges = TrackPresentation.badges(for: track, override: override)
+    }
+
     var body: some View {
         HStack(spacing: 5) {
             ForEach(Array(badges.enumerated()), id: \.offset) { _, badge in
@@ -70,6 +78,7 @@ struct TrackBadgesView: View {
 
 struct TrackTooltipView: View {
     let track: SetaTrack
+    var override: TrackOverride?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -81,7 +90,7 @@ struct TrackTooltipView: View {
                 .font(.system(size: 11))
                 .foregroundStyle(SetaTheme.muted)
                 .padding(.bottom, 8)
-            TrackBadgesView(badges: TrackPresentation.badges(for: track))
+            TrackBadgesView(track: track, override: override)
                 .padding(.bottom, 8)
             if let warning = TrackPresentation.tooltipWarning(for: track) {
                 Text(warning)

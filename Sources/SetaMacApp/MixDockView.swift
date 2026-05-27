@@ -67,7 +67,7 @@ struct MixDockView: View {
                 }
                 .padding(.bottom, 8)
 
-                ManualEnergyControl(store: store)
+                ManualTrackControls(store: store)
                     .padding(.bottom, 8)
 
                 if store.mixDockTab == .neighbors {
@@ -88,37 +88,67 @@ struct MixDockView: View {
     }
 }
 
-struct ManualEnergyControl: View {
+struct ManualTrackControls: View {
     @ObservedObject var store: LibraryStore
 
     var body: some View {
         if let track = store.selectedTrack {
-            VStack(alignment: .leading, spacing: 5) {
-                HStack {
-                    Text("Intensity")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(SetaTheme.muted)
-                    Spacer()
-                    Text(String(format: "%.2f", track.effectiveEnergy))
-                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(SetaTheme.text)
-                    Button("Auto") {
-                        store.clearManualEnergy(for: track.id)
-                    }
-                    .font(.system(size: 9, weight: .semibold))
-                    .buttonStyle(.plain)
-                    .foregroundStyle(track.energyManual == nil ? SetaTheme.muted.opacity(0.55) : SetaTheme.accent)
-                    .disabled(track.energyManual == nil)
+            VStack(alignment: .leading, spacing: 8) {
+                ManualOverrideRow(
+                    title: "BPM",
+                    valueText: track.bpm.map { "\(Int($0.rounded()))" } ?? "?",
+                    isManual: store.trackOverride(for: track.id)?.bpm != nil,
+                    onAuto: { store.clearManualBPM(for: track.id) }
+                ) {
+                    Slider(
+                        value: Binding(
+                            get: { track.bpm ?? MapPlotMetrics.bpmDomain.lowerBound },
+                            set: { store.setManualBPM($0, for: track.id) }
+                        ),
+                        in: MapPlotMetrics.bpmDomain,
+                        step: 1
+                    )
+                    .controlSize(.small)
                 }
-                Slider(
-                    value: Binding(
-                        get: { store.selectedTrack?.effectiveEnergy ?? track.effectiveEnergy },
-                        set: { store.setManualEnergy($0, for: track.id) }
-                    ),
-                    in: 0 ... 1,
-                    step: 0.01
-                )
-                .controlSize(.small)
+
+                ManualOverrideRow(
+                    title: "Key",
+                    valueText: track.key ?? "?",
+                    isManual: store.trackOverride(for: track.id)?.key != nil,
+                    onAuto: { store.clearManualKey(for: track.id) }
+                ) {
+                    Picker("Key", selection: Binding(
+                        get: {
+                            track.key.flatMap { Camelot.isKnownCode($0) ? $0.uppercased() : nil }
+                                ?? Camelot.orderedCodes.first!
+                        },
+                        set: { store.setManualKey($0, for: track.id) }
+                    )) {
+                        ForEach(Camelot.orderedCodes, id: \.self) { code in
+                            Text(code).tag(code)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                ManualOverrideRow(
+                    title: "Intensity",
+                    valueText: String(format: "%.2f", track.effectiveEnergy),
+                    isManual: store.trackOverride(for: track.id)?.energy != nil || track.energyManual != nil,
+                    onAuto: { store.clearManualEnergy(for: track.id) }
+                ) {
+                    Slider(
+                        value: Binding(
+                            get: { track.effectiveEnergy },
+                            set: { store.setManualEnergy($0, for: track.id) }
+                        ),
+                        in: 0 ... 1,
+                        step: 0.01
+                    )
+                    .controlSize(.small)
+                }
             }
             .padding(8)
             .background(Color.white.opacity(0.55))
@@ -127,6 +157,34 @@ struct ManualEnergyControl: View {
                     .strokeBorder(SetaTheme.panelBorder.opacity(0.8))
             }
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+    }
+}
+
+private struct ManualOverrideRow<Control: View>: View {
+    let title: String
+    let valueText: String
+    let isManual: Bool
+    let onAuto: () -> Void
+    @ViewBuilder var control: () -> Control
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Text(title)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(SetaTheme.muted)
+                Spacer()
+                Text(valueText)
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(SetaTheme.text)
+                Button("Auto") { onAuto() }
+                    .font(.system(size: 9, weight: .semibold))
+                    .buttonStyle(.plain)
+                    .foregroundStyle(isManual ? SetaTheme.accent : SetaTheme.muted.opacity(0.55))
+                    .disabled(!isManual)
+            }
+            control()
         }
     }
 }

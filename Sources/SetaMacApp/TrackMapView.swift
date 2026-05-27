@@ -18,6 +18,7 @@ struct TrackMapView: View {
     var rightChrome: CGFloat = 0
     var bottomChrome: CGFloat = SetaTheme.playerHeight + 10
     var resetTrigger: UUID = UUID()
+    var trackOverrides: [String: TrackOverride] = [:]
     var onPlayTrack: ((String) -> Void)?
 
     @State private var scale: CGFloat = 1
@@ -228,7 +229,7 @@ struct TrackMapView: View {
         let left = center.x + loupeRadius + gap
         let top = center.y - loupeRadius / 2
 
-        TrackTooltipView(track: track)
+        TrackTooltipView(track: track, override: trackOverrides[track.id])
             .position(x: left + tooltipWidth / 2, y: top + estimatedTooltipHeight / 2)
             .allowsHitTesting(false)
             .zIndex(6)

@@ -439,6 +439,35 @@ func rekordboxPlaylistImport() throws {
     check(RekordboxLibraryBridge.playlistCount(inProcessOutput: polluted) == 1, "polluted stdout json")
 }
 
+func trackOverrideHelpers() throws {
+    let json = """
+    {
+      "track_count": 1,
+      "tracks": [
+        { "id": "t1", "path": "/t.wav", "artist": "A", "title": "T", "source": "tracks", "bpm": 120, "energy": 0.4, "key": "8A" }
+      ],
+      "edges": []
+    }
+    """
+    let track = try SetaLibrary.decode(from: Data(json.utf8)).tracks[0]
+    let override = TrackOverride.normalized(bpm: 126, key: "9A", energy: 0.75)
+    let updated = track.applyingTrackOverride(override)
+    check(updated.bpm == 126, "override bpm")
+    check(updated.key == "9A", "override key")
+    check(abs(updated.effectiveEnergy - 0.75) < 0.001, "override energy")
+
+    let badges = TrackPresentation.badges(for: updated, override: override)
+    check(badges.contains { $0.text.contains("126 BPM M") }, "manual bpm badge")
+    check(badges.contains { $0.text == "9A M" }, "manual key badge")
+
+    let defaults = UserDefaults(suiteName: "seta-track-overrides-check")!
+    defaults.removePersistentDomain(forName: "seta-track-overrides-check")
+    defaults.set(["legacy": 0.66], forKey: TrackOverridesStorage.legacyEnergyKey)
+    let migrated = TrackOverridesStorage.load(from: defaults)
+    check(migrated["legacy"]?.energy == 0.66, "legacy energy migration")
+    check(defaults.data(forKey: TrackOverridesStorage.storageKey) != nil, "legacy energy migrates forward")
+}
+
 do {
     try decodesCurrentLibraryContract()
     try validationFindsContractIssues()
@@ -449,6 +478,7 @@ do {
     try setMomentsAndSettingsHelpers()
     try uiGeometryChecks()
     try rekordboxPlaylistImport()
+    try trackOverrideHelpers()
     try smokeRealLibrary()
     print("SetaMacChecks: OK")
 } catch {

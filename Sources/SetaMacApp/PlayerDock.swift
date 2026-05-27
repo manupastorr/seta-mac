@@ -38,7 +38,7 @@ struct PlayerDock: View {
                         .foregroundStyle(SetaTheme.muted)
                         .lineLimit(1)
                     if let track = currentTrack {
-                        TrackBadgesView(badges: TrackPresentation.badges(for: track))
+                        TrackBadgesView(track: track, override: store.trackOverride(for: track.id))
                             .padding(.top, 2)
                     }
                 }

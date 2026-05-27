@@ -20,9 +20,8 @@ cd ../seta-mac
 - [ ] Player dock starts idle with `Nothing playing`; no track auto-plays on launch.
 - [ ] Toolbar open/rescan works.
 - [ ] Search, source, genre, BPM, Camelot, draft-only, and set-zone filters work.
-- [ ] Map selection, neighbor highlighting, and explore-link overlay work.
-- [ ] Selecting a track shows the mix-dock Intensity slider; changing it moves/sorts the track by the manual value.
-- [ ] Clicking `Auto` clears the manual intensity override and returns to scanner energy.
+- [ ] Map selection and neighbor highlighting work.
+- [ ] Selecting a track shows BPM, Key, and Intensity controls in the mix dock; each `Auto` button clears that manual override.
 - [ ] Player dock plays local audio, seeks via waveform, and shows elapsed/total time.
 - [ ] Top filter bar does not wrap chip labels or clip Reset/open/rescan controls at the default window width.
 - [ ] In windowed mode the filter bar uses icon buttons with tooltips and sits flush under the title bar.

@@ -41,9 +41,11 @@ public enum TrackPresentation {
         }
     }
 
-    public static func badges(for track: SetaTrack) -> [Badge] {
+    public static func badges(for track: SetaTrack, override: TrackOverride? = nil) -> [Badge] {
         var items: [Badge] = []
-        let bpmText = track.bpm.map { "\(Int($0.rounded())) BPM" } ?? "? BPM"
+        let bpmManual = override?.bpm != nil
+        let keyManual = override?.key != nil
+        let bpmText = track.bpm.map { "\(Int($0.rounded())) BPM\(bpmManual ? " M" : "")" } ?? "? BPM"
         items.append(Badge(kind: .bpm, text: bpmText))
 
         let keyText = track.key ?? "?"
@@ -51,19 +53,20 @@ public enum TrackPresentation {
         items.append(
             Badge(
                 kind: .key,
-                text: keyText,
+                text: keyManual ? "\(keyText) M" : keyText,
                 borderHex: keyColor + "44",
                 backgroundHex: keyColor + "1a"
             )
         )
 
         let energy = track.effectiveEnergy
-        let sourceSuffix = track.energyManual == nil ? "" : " M"
+        let energyManual = override?.energy != nil || track.energyManual != nil
+        let sourceSuffix = energyManual ? " M" : ""
         items.append(
             Badge(
                 kind: .energy,
                 text: "Int \(String(format: "%.2f", energy))\(sourceSuffix)",
-                title: "\(track.energyManual == nil ? "Estimated" : "Manual") intensity (0–1, map Y uses library range)"
+                title: "\(energyManual ? "Manual" : "Estimated") intensity (0–1, map Y uses library range)"
             )
         )
 

@@ -34,7 +34,7 @@ final class LibraryStore: ObservableObject {
     @Published var momentsLegendOpen = false
     @Published var queueFocusIndex = -1
     @Published var searchResultsIndex = -1
-    @Published var energyOverrides: [String: Double] = [:]
+    @Published var trackOverrides: [String: TrackOverride] = [:]
     @Published var showingRekordboxImport = false
     @Published var rekordboxImportCandidates: [PlaylistImportCandidate] = []
     @Published var rekordboxImportMatchedCounts: [Int] = []
@@ -47,11 +47,10 @@ final class LibraryStore: ObservableObject {
     private var playQueueSig = ""
     private var persistWorkItem: DispatchWorkItem?
     private var suppressPlaybackUntil = Date.distantPast
-    private let energyOverridesKey = "seta-energy-overrides-v1"
 
     init() {
         restoreDraft()
-        restoreEnergyOverrides()
+        restoreTrackOverrides()
         player.onFinished = { [weak self] in
             self?.playRelative(step: 1)
         }
@@ -205,7 +204,7 @@ final class LibraryStore: ObservableObject {
     func load(url: URL, remember: Bool = true) {
         do {
             let data = try Data(contentsOf: url)
-            let decoded = applyingEnergyOverrides(to: try SetaLibrary.decode(from: data))
+            let decoded = applyingTrackOverrides(to: try SetaLibrary.decode(from: data))
             let decodedIssues = decoded.validationIssues()
             errorMessage = nil
             if remember {
@@ -232,21 +231,21 @@ final class LibraryStore: ObservableObject {
         }
     }
 
-    private func restoreEnergyOverrides() {
-        guard let raw = UserDefaults.standard.dictionary(forKey: energyOverridesKey) as? [String: Double] else {
-            energyOverrides = [:]
-            return
-        }
-        energyOverrides = raw.filter { $0.value.isFinite }.mapValues { min(1, max(0, $0)) }
+    func trackOverride(for trackId: String) -> TrackOverride? {
+        trackOverrides[trackId]
     }
 
-    private func persistEnergyOverrides() {
-        UserDefaults.standard.set(energyOverrides, forKey: energyOverridesKey)
+    private func restoreTrackOverrides() {
+        trackOverrides = TrackOverridesStorage.load()
     }
 
-    private func applyingEnergyOverrides(to library: SetaLibrary) -> SetaLibrary {
+    private func persistTrackOverrides() {
+        TrackOverridesStorage.save(trackOverrides)
+    }
+
+    private func applyingTrackOverrides(to library: SetaLibrary) -> SetaLibrary {
         let tracks = library.tracks.map { track in
-            track.applyingManualEnergy(energyOverrides[track.id])
+            track.applyingTrackOverride(trackOverrides[track.id])
         }
         return SetaLibrary(
             generatedAt: library.generatedAt,
@@ -258,9 +257,26 @@ final class LibraryStore: ObservableObject {
         )
     }
 
-    private func applyEnergyOverridesToCurrentLibrary() {
+    private func applyTrackOverridesToCurrentLibrary() {
         guard let library else { return }
-        self.library = applyingEnergyOverrides(to: library)
+        self.library = applyingTrackOverrides(to: library)
+    }
+
+    private func updateTrackOverride(for trackId: String, _ mutate: (inout TrackOverride) -> Void) {
+        var override = trackOverrides[trackId] ?? TrackOverride()
+        mutate(&override)
+        if override.isEmpty {
+            trackOverrides.removeValue(forKey: trackId)
+        } else {
+            trackOverrides[trackId] = TrackOverride.normalized(
+                bpm: override.bpm,
+                key: override.key,
+                energy: override.energy
+            )
+        }
+        persistTrackOverrides()
+        applyTrackOverridesToCurrentLibrary()
+        syncPlayQueue()
     }
 
     func rescanLibrary() {
@@ -600,18 +616,28 @@ final class LibraryStore: ObservableObject {
         syncPlayQueue()
     }
 
+    func setManualBPM(_ value: Double, for trackId: String) {
+        updateTrackOverride(for: trackId) { $0.bpm = value }
+    }
+
+    func clearManualBPM(for trackId: String) {
+        updateTrackOverride(for: trackId) { $0.bpm = nil }
+    }
+
+    func setManualKey(_ value: String, for trackId: String) {
+        updateTrackOverride(for: trackId) { $0.key = value }
+    }
+
+    func clearManualKey(for trackId: String) {
+        updateTrackOverride(for: trackId) { $0.key = nil }
+    }
+
     func setManualEnergy(_ value: Double, for trackId: String) {
-        energyOverrides[trackId] = min(1, max(0, value))
-        persistEnergyOverrides()
-        applyEnergyOverridesToCurrentLibrary()
-        syncPlayQueue()
+        updateTrackOverride(for: trackId) { $0.energy = value }
     }
 
     func clearManualEnergy(for trackId: String) {
-        energyOverrides.removeValue(forKey: trackId)
-        persistEnergyOverrides()
-        applyEnergyOverridesToCurrentLibrary()
-        syncPlayQueue()
+        updateTrackOverride(for: trackId) { $0.energy = nil }
     }
 
     func playSelected() {
