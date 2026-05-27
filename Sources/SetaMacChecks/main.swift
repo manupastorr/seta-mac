@@ -371,6 +371,61 @@ func smokeRealLibrary() throws {
     print("SetaMacLibrarySmoke: OK (\(library.tracks.count) tracks, decode \(decodeMs)ms, \(url.path))")
 }
 
+func rekordboxPlaylistImport() throws {
+    check(
+        RekordboxPlaylistImport.normalizedPath("file://localhost/Users/me/track.wav") == "/Users/me/track.wav",
+        "file url path"
+    )
+
+    let m3u = """
+    #EXTM3U
+    #EXTINF:-1,Artist - One
+    /tracks/Artist - One.wav
+    /missing/Artist - Ghost.wav
+    """
+    let m3uURL = FileManager.default.temporaryDirectory.appendingPathComponent("seta-test.m3u")
+    try m3u.write(to: m3uURL, atomically: true, encoding: .utf8)
+    let parsed = try RekordboxPlaylistImport.parseM3U(at: m3uURL)
+    check(parsed.paths.count == 2, "m3u paths")
+
+    let xml = """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <DJ_PLAYLISTS Version="1.0.0">
+      <COLLECTION Entries="2">
+        <TRACK TrackID="1" Location="file://localhost/tracks/Artist%20-%20One.wav"/>
+        <TRACK TrackID="2" Location="file://localhost/tracks/Artist%20-%20Two.wav"/>
+      </COLLECTION>
+      <PLAYLISTS>
+        <NODE Type="0" Name="ROOT">
+          <NODE Type="1" Name="Warmup">
+            <TRACK Key="1"/>
+            <TRACK Key="2"/>
+          </NODE>
+        </NODE>
+      </PLAYLISTS>
+    </DJ_PLAYLISTS>
+    """
+    let xmlURL = FileManager.default.temporaryDirectory.appendingPathComponent("seta-test.xml")
+    try xml.write(to: xmlURL, atomically: true, encoding: .utf8)
+    let playlists = try RekordboxPlaylistImport.parseRekordboxXML(at: xmlURL)
+    check(playlists.count == 1 && playlists[0].name == "Warmup", "xml playlist")
+
+    let libraryJSON = """
+    {
+      "track_count": 2,
+      "tracks": [
+        { "id": "one", "path": "/tracks/Artist - One.wav", "artist": "A", "title": "One", "source": "tracks" },
+        { "id": "two", "path": "/tracks/Artist - Two.wav", "artist": "A", "title": "Two", "source": "tracks" }
+      ],
+      "edges": []
+    }
+    """
+    let library = try SetaLibrary.decode(from: Data(libraryJSON.utf8))
+    let match = RekordboxPlaylistImport.matchPaths(playlists[0].paths + ["/nope.wav"], in: library.tracks)
+    check(match.matchedTrackIds == ["one", "two"], "path match order")
+    check(match.skippedCount == 1, "path skip missing")
+}
+
 do {
     try decodesCurrentLibraryContract()
     try validationFindsContractIssues()
@@ -380,6 +435,7 @@ do {
     draftStoreRoundtrip()
     try setMomentsAndSettingsHelpers()
     try uiGeometryChecks()
+    try rekordboxPlaylistImport()
     try smokeRealLibrary()
     print("SetaMacChecks: OK")
 } catch {

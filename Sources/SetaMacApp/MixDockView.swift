@@ -206,6 +206,7 @@ struct DraftPane: View {
             }
             HStack(spacing: 5) {
                 SetaSecondaryButton(title: "Play draft") { store.playDraftFromStart() }
+                SetaSecondaryButton(title: "Import Rekordbox") { store.beginRekordboxImport() }
                 SetaSecondaryButton(title: "Export M3U") { store.exportDraftM3U() }
                 SetaSecondaryButton(title: "Copy list") { store.copyDraftListToPasteboard() }
             }

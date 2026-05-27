@@ -35,6 +35,10 @@ final class LibraryStore: ObservableObject {
     @Published var queueFocusIndex = -1
     @Published var searchResultsIndex = -1
     @Published var energyOverrides: [String: Double] = [:]
+    @Published var showingRekordboxImport = false
+    @Published var rekordboxImportCandidates: [PlaylistImportCandidate] = []
+    @Published var rekordboxImportMessage: String?
+    @Published var showingRekordboxFileImporter = false
 
     let player = AudioPlayerController()
 
@@ -373,6 +377,73 @@ final class LibraryStore: ObservableObject {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
         statusMessage = "Draft copied."
+    }
+
+    func beginRekordboxImport() {
+        let root = settings.setaScannerRoot.map { URL(fileURLWithPath: $0) }
+        let result = RekordboxLibraryBridge.loadPlaylists(scannerRoot: root)
+        rekordboxImportCandidates = result.playlists
+        rekordboxImportMessage = result.message
+        showingRekordboxImport = true
+    }
+
+    func importRekordboxFile(url: URL) {
+        do {
+            let candidates: [PlaylistImportCandidate]
+            let ext = url.pathExtension.lowercased()
+            if ext == "xml" {
+                candidates = try RekordboxPlaylistImport.parseRekordboxXML(at: url)
+            } else {
+                candidates = [try RekordboxPlaylistImport.parseM3U(at: url)]
+            }
+            guard !candidates.isEmpty else {
+                statusMessage = "No playlists found in that file."
+                return
+            }
+            if candidates.count == 1 {
+                importRekordboxCandidate(candidates[0])
+            } else {
+                rekordboxImportCandidates = candidates
+                rekordboxImportMessage = nil
+                showingRekordboxImport = true
+            }
+        } catch {
+            statusMessage = "Could not read playlist file."
+        }
+    }
+
+    func importRekordboxCandidate(_ candidate: PlaylistImportCandidate) {
+        guard let library else { return }
+        let match = RekordboxPlaylistImport.matchPaths(candidate.paths, in: library.tracks)
+        guard !match.matchedTrackIds.isEmpty else {
+            statusMessage = "No tracks from \"\(candidate.name)\" were found in your Seta library."
+            return
+        }
+
+        persistDraftNow()
+        var imported = DraftStore.createDraft(name: candidate.name)
+        imported.trackIds = match.matchedTrackIds
+        imported.sortMode = .manual
+        draftStoreState.drafts[imported.id] = imported
+        draftStoreState.activeId = imported.id
+        draft = imported
+        DraftStore.save(draftStoreState)
+        mixDockTab = .draft
+        mixDockExpanded = true
+        draftPlayMode = false
+        syncPlayQueue()
+        showingRekordboxImport = false
+
+        if match.skippedCount > 0 {
+            statusMessage = "Imported \(match.matchedCount) of \(match.totalCount) tracks into \"\(candidate.name)\"."
+        } else {
+            statusMessage = "Imported \(match.matchedCount) tracks into \"\(candidate.name)\"."
+        }
+    }
+
+    func matchedCount(for candidate: PlaylistImportCandidate) -> Int {
+        guard let library else { return 0 }
+        return RekordboxPlaylistImport.matchPaths(candidate.paths, in: library.tracks).matchedCount
     }
 
     func setNeighborAnchor(_ trackId: String) {

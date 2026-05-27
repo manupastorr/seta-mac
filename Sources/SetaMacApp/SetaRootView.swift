@@ -28,6 +28,9 @@ struct SetaRootView: View {
             .sheet(isPresented: $store.showShortcutsHelp) {
                 ShortcutsHelpView()
             }
+            .sheet(isPresented: $store.showingRekordboxImport) {
+                RekordboxImportSheet(store: store)
+            }
             .task {
                 if store.library == nil {
                     store.autoLoadLibraryIfPossible()
