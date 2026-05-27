@@ -11,6 +11,8 @@ Native macOS app for Seta — browse your library on a **BPM × energy** map wit
 3. Clone [seta](https://github.com/manupastorr/seta) and run `./start.sh` once (needed for **Rescan**).
 4. In the app: **Library → Library Folders…** → add folders → **Rescan library**.
 
+![SetaMac map](docs/screenshots/01-map.png)
+
 Details and screenshots: **[docs/DOWNLOAD.md](docs/DOWNLOAD.md)**.
 
 ## Versioning

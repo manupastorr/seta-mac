@@ -28,11 +28,13 @@ Removing a folder or track in Seta does **not** delete your audio files.
 
 ## Screenshots
 
+GitHub does not show SVG images in Markdown — these are PNG captures from the app.
+
 | Map | Library folders | Player |
 |-----|-----------------|--------|
-| ![BPM × energy map](screenshots/01-map.svg) | ![Folder setup](screenshots/02-folders.svg) | ![Player dock](screenshots/03-player.svg) |
+| ![BPM × energy map](screenshots/01-map.png) | ![Folder setup](screenshots/02-folders.png) | ![Player dock](screenshots/03-player.png) |
 
-Replace with real captures anytime: `./scripts/capture-screenshots.sh` (needs Accessibility permission for your terminal).
+Re-capture: `./scripts/capture-screenshots.sh` (Terminal needs Accessibility in System Settings).
 
 ## Optional: sign & notarize
 
