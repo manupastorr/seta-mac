@@ -2,6 +2,7 @@
 
 ## 0.2.0
 
+- Product language: SetaMac is now framed as a local-first, map-first set-journey tool for starting DJ set drafts with candidates, bridge routes, weak-link review, and Rekordbox export.
 - Map: collision-aware dot layout, zoom up to 10× toward the cursor, vector redraw while zoomed, and tighter vertical layout (measured filter-bar top chrome, intensity axis capped to library data).
 - Map: trims excess top whitespace by using a tighter plot inset and balanced intensity-domain padding.
 - Library Folders: multiple curated and incoming roots, recursive scan.
@@ -10,4 +11,4 @@
 
 ## 0.1.0
 
-- Native BPM × energy map, playback, drafts, Camelot neighbors, Python rescan bridge.
+- Native map-first library view, playback, draft building, candidate highlighting, and Python rescan bridge.

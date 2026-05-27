@@ -2,6 +2,8 @@
 
 Date: 2026-05-24
 
+SetaMac should feel like a map-first set-journey tool: start from a seed track, explore plausible candidates and bridges, build a draft, review weak links, then export without turning the workflow into automatic playlist generation.
+
 Run after `./scripts/verify-all.sh` passes.
 
 ## Setup
@@ -28,7 +30,9 @@ cd ../seta-mac
 - [ ] Player dock starts idle with `Nothing playing`; no track auto-plays on launch.
 - [ ] Toolbar open/rescan works.
 - [ ] Search, source, genre, BPM, Camelot, draft-only, and set-zone filters work.
-- [ ] Map selection and neighbor highlighting work.
+- [ ] Map selection and candidate highlighting work.
+- [ ] Candidate reasons explain practical fit, such as key, BPM move, energy direction, outro-to-intro fit, zone, or review warnings.
+- [ ] Candidate kinds feel meaningful: smooth, lift, bridge, contrast, and risky should not read as fake confidence.
 - [ ] Selecting a track shows BPM, Key, and Intensity controls in the mix dock; each `Auto` button clears that manual override.
 - [ ] Player dock plays local audio, seeks via waveform, and shows elapsed/total time.
 - [ ] Top filter bar does not wrap chip labels or clip Reset/open/rescan controls at the default window width.
@@ -40,7 +44,7 @@ cd ../seta-mac
 - [ ] Space play/pause
 - [ ] ← / → previous/next
 - [ ] Shift ← / → seek ±10s
-- [ ] `n` neighbor queue, `a` add draft, `p` play draft, `e`/`b` draft sort, `z` zones panel, `?` help
+- [ ] `n` candidate queue, `a` add draft, `p` play draft, `e`/`b` draft sort, `z` zones panel, `?` help
 - [ ] Typing shortcut letters in search or note fields enters text and does not trigger shortcuts.
 - [ ] Command-Control-F toggles native full screen.
 
@@ -56,6 +60,8 @@ cd ../seta-mac
 
 - [ ] Multiple drafts can be created/selected/deleted.
 - [ ] Notes, final marks, drag reorder, persistence after restart.
+- [ ] Draft analysis marks links to review without creating noisy anxiety.
+- [ ] Bridge/repair suggestions remain opt-in and do not mutate the draft until applied.
 - [ ] M3U/text export.
 
 ## Scanner Bridge
