@@ -218,11 +218,20 @@ struct FloatingChrome<Content: View>: View {
 extension Color {
     init(hex: String) {
         let raw = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
-        let value = UInt64(raw, radix: 16) ?? 0x555770
+        let rgbRaw: String
+        let alpha: Double
+        if raw.count == 8 {
+            rgbRaw = String(raw.prefix(6))
+            alpha = Double(UInt8(String(raw.suffix(2)), radix: 16) ?? 255) / 255
+        } else {
+            rgbRaw = raw
+            alpha = 1
+        }
+        let value = UInt64(rgbRaw, radix: 16) ?? 0x555770
         let red = Double((value >> 16) & 0xff) / 255
         let green = Double((value >> 8) & 0xff) / 255
         let blue = Double(value & 0xff) / 255
-        self.init(red: red, green: green, blue: blue)
+        self.init(red: red, green: green, blue: blue, opacity: alpha)
     }
 }
 

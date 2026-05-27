@@ -37,7 +37,7 @@ struct TrackBadgesView: View {
 
     private func background(for badge: TrackPresentation.Badge) -> Color {
         if let backgroundHex = badge.backgroundHex {
-            return Color(hex: String(backgroundHex.prefix(7)))
+            return Color(hex: backgroundHex)
         }
         switch badge.kind {
         case .vocals:
@@ -53,7 +53,7 @@ struct TrackBadgesView: View {
 
     private func border(for badge: TrackPresentation.Badge) -> Color {
         if let borderHex = badge.borderHex {
-            return Color(hex: String(borderHex.prefix(7))).opacity(0.5)
+            return Color(hex: borderHex)
         }
         switch badge.kind {
         case .vocals:
