@@ -53,6 +53,10 @@ final class LibraryStore: ObservableObject {
     private var playQueueSig = ""
     private var persistWorkItem: DispatchWorkItem?
     private var suppressPlaybackUntil = Date.distantPast
+    private var smartNeighborCacheAnchor: String?
+    private var smartNeighborCacheSignature = ""
+    private var smartNeighborCache: [SmartNeighbor] = []
+    private var smartNeighborRevision = 0
 
     init() {
         restoreDraft()
@@ -188,12 +192,34 @@ final class LibraryStore: ObservableObject {
     }
 
     func smartNeighbors(for anchor: String) -> [SmartNeighbor] {
-        SmartMixEngine.neighbors(
+        let tracks = filteredTracks
+        let signature = smartNeighborSignature(anchor: anchor, tracks: tracks)
+        if smartNeighborCacheAnchor == anchor, smartNeighborCacheSignature == signature {
+            return smartNeighborCache
+        }
+        let neighbors = SmartMixEngine.neighbors(
             for: anchor,
-            in: filteredTracks,
+            in: tracks,
             intent: JourneyIntent(),
             feedback: transitionFeedback
         )
+        smartNeighborCacheAnchor = anchor
+        smartNeighborCacheSignature = signature
+        smartNeighborCache = neighbors
+        return neighbors
+    }
+
+    private func smartNeighborSignature(anchor: String, tracks: [SetaTrack]) -> String {
+        let feedbackRevision = transitionFeedback.values.map(\.updatedAt).max() ?? 0
+        let filteredIDs = tracks.map(\.id).joined(separator: "|")
+        return "\(smartNeighborRevision)|\(anchor)|\(feedbackRevision)|\(transitionFeedback.count)|\(filteredIDs)"
+    }
+
+    private func invalidateSmartNeighborCache() {
+        smartNeighborRevision += 1
+        smartNeighborCacheAnchor = nil
+        smartNeighborCacheSignature = ""
+        smartNeighborCache = []
     }
 
     var availableKeys: [String] {
@@ -259,6 +285,7 @@ final class LibraryStore: ObservableObject {
             deferAfterListUpdate {
                 self.library = libraryWithOverrides
                 self.issues = decodedIssues
+                self.invalidateSmartNeighborCache()
                 self.player.stop()
                 self.playingTrackID = nil
                 self.suppressPlaybackUntil = Date().addingTimeInterval(1.0)
@@ -324,12 +351,14 @@ final class LibraryStore: ObservableObject {
     private func applyTrackOverridesToCurrentLibrary() {
         guard let baseLibrary else { return }
         library = displayedLibrary(from: baseLibrary)
+        invalidateSmartNeighborCache()
     }
 
     private func refreshDisplayedLibrary() {
         guard let baseLibrary else { return }
         library = displayedLibrary(from: baseLibrary)
         issues = library?.validationIssues() ?? []
+        invalidateSmartNeighborCache()
         syncPlayQueue()
     }
 
@@ -737,6 +766,7 @@ final class LibraryStore: ObservableObject {
         )
         transitionFeedback[item.id] = item
         TransitionFeedbackStorage.save(transitionFeedback)
+        invalidateSmartNeighborCache()
         syncPlayQueue()
         statusMessage = rating > 0 ? "Transition marked as working." : "Transition marked as not working."
     }
@@ -775,7 +805,7 @@ final class LibraryStore: ObservableObject {
         if draftWeakLinks.isEmpty {
             statusMessage = "Draft transitions look solid."
         } else {
-            statusMessage = "Found \(draftWeakLinks.count) weak draft link\(draftWeakLinks.count == 1 ? "" : "s")."
+            statusMessage = "Found \(draftWeakLinks.count) draft link\(draftWeakLinks.count == 1 ? "" : "s") to review."
         }
     }
 

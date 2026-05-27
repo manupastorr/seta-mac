@@ -547,12 +547,14 @@ func trackOverrideHelpers() throws {
 func smartJourneyChecks() throws {
     let json = """
     {
-      "track_count": 8,
+      "track_count": 10,
       "tracks": [
         { "id": "anchor", "path": "/a.wav", "artist": "A", "title": "Anchor", "source": "tracks", "genre": "House", "bpm": 124, "energy": 0.50, "energy_intro": 0.48, "energy_outro": 0.52, "key": "8A", "vocals": "no", "vocals_confidence": 0.8 },
         { "id": "same", "path": "/same.wav", "artist": "B", "title": "Same", "source": "tracks", "genre": "House", "bpm": 125, "energy": 0.58, "energy_intro": 0.53, "energy_outro": 0.60, "key": "8A", "vocals": "no", "vocals_confidence": 0.8 },
         { "id": "weak", "path": "/weak.wav", "artist": "C", "title": "Weak", "source": "tracks", "genre": "Techno", "bpm": 132, "energy": 0.84, "key": "10A", "vocals": "no", "vocals_confidence": 0.8 },
         { "id": "lift", "path": "/lift.wav", "artist": "D", "title": "Lift", "source": "tracks", "genre": "House", "bpm": 126, "energy": 0.64, "energy_intro": 0.55, "key": "8A", "vocals": "no", "vocals_confidence": 0.8 },
+        { "id": "genreonly", "path": "/genre.wav", "artist": "D", "title": "Genre Only", "source": "tracks", "genre": "Deep House", "bpm": 124, "energy": 0.52, "energy_intro": 0.52, "key": "8A", "vocals": "no", "vocals_confidence": 0.8 },
+        { "id": "truebridge", "path": "/bridge.wav", "artist": "D", "title": "True Bridge", "source": "to_curate", "genre": "Techno", "bpm": 128, "energy": 0.54, "energy_intro": 0.53, "key": "9A", "vocals": "no", "vocals_confidence": 0.8 },
         { "id": "midbridge", "path": "/mid.wav", "artist": "D", "title": "Mid Bridge", "source": "tracks", "genre": "House", "bpm": 128, "energy": 0.70, "energy_intro": 0.62, "key": "9A", "vocals": "no", "vocals_confidence": 0.8 },
         { "id": "vocal", "path": "/vocal.wav", "artist": "E", "title": "Vocal", "source": "tracks", "genre": "House", "bpm": 125, "energy": 0.56, "key": "8A", "vocals": "yes", "vocals_confidence": 0.9 },
         { "id": "vocal2", "path": "/vocal2.wav", "artist": "F", "title": "Vocal Two", "source": "tracks", "genre": "House", "bpm": 126, "energy": 0.58, "key": "8A", "vocals": "yes", "vocals_confidence": 0.9 },
@@ -567,6 +569,8 @@ func smartJourneyChecks() throws {
     let same = byId["same"]!
     let weak = byId["weak"]!
     let lift = byId["lift"]!
+    let genreOnly = byId["genreonly"]!
+    let trueBridge = byId["truebridge"]!
     let vocal = byId["vocal"]!
     let vocal2 = byId["vocal2"]!
 
@@ -577,6 +581,8 @@ func smartJourneyChecks() throws {
 
     let liftScore = SmartMixEngine.score(from: anchor, to: lift, intent: JourneyIntent(mode: .lift))
     check(liftScore.kind == .lift, "lift intent classifies controlled lift")
+    check(SmartMixEngine.score(from: anchor, to: genreOnly).kind != .bridge, "genre-only difference is not labeled bridge")
+    check(SmartMixEngine.score(from: anchor, to: trueBridge).kind == .bridge, "bridge label requires meaningful movement")
 
     let vocalScore = SmartMixEngine.score(from: vocal, to: vocal2)
     check(vocalScore.warnings.contains("vocal risk"), "vocal clash warning")

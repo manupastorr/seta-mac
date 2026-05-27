@@ -290,19 +290,19 @@ public enum SmartMixEngine {
         guard !targets.isEmpty else { return [] }
 
         var routes: [SmartBridgeRoute] = []
+        let mids = neighbors(
+            for: source.id,
+            in: [source] + pool,
+            intent: intent,
+            feedback: feedback,
+            limit: 35
+        )
         for target in targets.prefix(60) where target.id != source.id {
             let direct = score(from: source, to: target, intent: intent, feedback: feedback)
             if direct.total >= 0.62 {
                 routes.append(route([source, target], intent: intent, feedback: feedback))
             }
 
-            let mids = neighbors(
-                for: source.id,
-                in: [source] + pool,
-                intent: intent,
-                feedback: feedback,
-                limit: 35
-            )
             for mid in mids where mid.track.id != target.id {
                 let second = score(from: mid.track, to: target, intent: intent, feedback: feedback)
                 guard second.total >= 0.50 else { continue }
@@ -528,10 +528,27 @@ public enum SmartMixEngine {
         }
         if intent.mode == .closing { return .closing }
         let delta = target.effectiveEnergy - source.effectiveEnergy
-        if delta > 0.11 { return .lift }
-        if abs(delta) > 0.24 { return .contrast }
-        if source.genre != target.genre || source.source != target.source { return .bridge }
+        let absDelta = abs(delta)
+        if delta >= 0.10 && delta <= 0.26 { return .lift }
+        if absDelta > 0.24 { return .contrast }
+        if isMeaningfulBridge(from: source, to: target, total: total) { return .bridge }
         return .smooth
+    }
+
+    private static func isMeaningfulBridge(from source: SetaTrack, to target: SetaTrack, total: Double) -> Bool {
+        guard total >= 0.72 else { return false }
+        let sourceGenre = source.genre?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let targetGenre = target.genre?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let crossesCollection = source.source != target.source || (sourceGenre != nil && targetGenre != nil && sourceGenre != targetGenre)
+        guard crossesCollection else { return false }
+
+        let sourceZones = matchingMomentIDs(source)
+        let targetZones = matchingMomentIDs(target)
+        let crossesZone = !sourceZones.isEmpty && !targetZones.isEmpty && sourceZones.isDisjoint(with: targetZones)
+        let bpmShift = abs((target.bpm ?? source.bpm ?? 0) - (source.bpm ?? target.bpm ?? 0)) >= 4
+        let harmonicMove = source.key != nil && target.key != nil && source.key != target.key
+        let sourceBoundary = source.source != target.source && (bpmShift || harmonicMove)
+        return crossesZone || (bpmShift && harmonicMove) || sourceBoundary
     }
 
     private static func matchingMomentIDs(_ track: SetaTrack) -> Set<String> {

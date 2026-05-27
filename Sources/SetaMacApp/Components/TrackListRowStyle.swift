@@ -69,6 +69,7 @@ struct TrackListRowChrome: View {
 struct NeighborTrackMetaColumn: View {
     let track: SetaTrack
     var score: Double?
+    var scoreLabel: String? = nil
     var inDraft: Bool = false
     var anchor: Bool = false
 
@@ -76,8 +77,8 @@ struct NeighborTrackMetaColumn: View {
         VStack(alignment: .trailing, spacing: 2) {
             if !anchor {
                 Group {
-                    if let score {
-                        Text("\(Int((score * 100).rounded()))%")
+                    if let scoreText {
+                        Text(scoreText)
                             .font(.system(size: 8, weight: .semibold))
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)
@@ -117,6 +118,12 @@ struct NeighborTrackMetaColumn: View {
             }
         }
         .frame(width: 46)
+    }
+
+    private var scoreText: String? {
+        if let scoreLabel { return scoreLabel }
+        guard let score else { return nil }
+        return "\(Int((score * 100).rounded()))%"
     }
 }
 

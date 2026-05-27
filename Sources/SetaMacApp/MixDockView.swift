@@ -444,9 +444,6 @@ struct NeighborRow: View {
                         CandidateReasonChips(score: smartScore)
                         CandidateInlineActions(
                             onAdd: onAdd,
-                            onBridge: onBridge,
-                            onWorks: onWorks,
-                            onReject: onReject,
                             onExplain: onExplain
                         )
                     }
@@ -456,6 +453,7 @@ struct NeighborRow: View {
                 NeighborTrackMetaColumn(
                     track: track,
                     score: score,
+                    scoreLabel: smartScore?.kind == .risky ? "Review" : nil,
                     inDraft: isInDraft,
                     anchor: isAnchor
                 )
@@ -530,17 +528,11 @@ struct CandidateReasonChips: View {
 
 struct CandidateInlineActions: View {
     let onAdd: () -> Void
-    let onBridge: () -> Void
-    let onWorks: () -> Void
-    let onReject: () -> Void
     let onExplain: () -> Void
 
     var body: some View {
         HStack(spacing: 8) {
             action("Add", onAdd)
-            action("Bridge", onBridge)
-            action("Works", onWorks)
-            action("No", onReject)
             action("Why", onExplain)
         }
     }
@@ -580,22 +572,27 @@ struct DraftWeakLinksView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Weak links")
+            Text("Links to review")
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(SetaTheme.muted)
             ForEach(store.draftWeakLinks.prefix(3)) { link in
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(link.from.displayTitle) → \(link.to.displayTitle) · \(Int((link.score.total * 100).rounded()))%")
+                    Text("\(link.from.displayTitle) → \(link.to.displayTitle) · Review")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(SetaTheme.text)
                         .lineLimit(2)
-                    ForEach(link.suggestions.prefix(2)) { suggestion in
+                    ForEach(link.suggestions.filter { !$0.trackIDs.isEmpty }.prefix(2)) { suggestion in
                         Button(suggestion.title) {
                             store.applyDraftSuggestion(suggestion, after: link.from.id)
                         }
                         .font(.system(size: 10))
                         .buttonStyle(.plain)
                         .foregroundStyle(SetaTheme.accent)
+                    }
+                    if !link.suggestions.contains(where: { !$0.trackIDs.isEmpty }) {
+                        Text("Try a smoother candidate before the next track.")
+                            .font(.system(size: 10))
+                            .foregroundStyle(SetaTheme.muted)
                     }
                 }
                 .padding(6)
