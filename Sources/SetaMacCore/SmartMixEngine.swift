@@ -300,13 +300,13 @@ public enum SmartMixEngine {
         for target in targets.prefix(60) where target.id != source.id {
             let direct = score(from: source, to: target, intent: intent, feedback: feedback)
             if direct.total >= 0.62 {
-                routes.append(route([source, target], intent: intent, feedback: feedback))
+                routes.append(route([source, target], transitions: [direct]))
             }
 
             for mid in mids where mid.track.id != target.id {
                 let second = score(from: mid.track, to: target, intent: intent, feedback: feedback)
                 guard second.total >= 0.50 else { continue }
-                routes.append(route([source, mid.track, target], intent: intent, feedback: feedback))
+                routes.append(route([source, mid.track, target], transitions: [mid.score, second]))
             }
         }
 
@@ -384,10 +384,17 @@ public enum SmartMixEngine {
         let transitions = zip(tracks, tracks.dropFirst()).map {
             score(from: $0.0, to: $0.1, intent: intent, feedback: feedback)
         }
-        let cost = transitions.reduce(0.0) { partial, score in
+        return route(tracks, transitions: transitions)
+    }
+
+    private static func route(_ tracks: [SetaTrack], transitions: [TransitionScore]) -> SmartBridgeRoute {
+        SmartBridgeRoute(tracks: tracks, transitions: transitions, totalCost: routeCost(transitions))
+    }
+
+    private static func routeCost(_ transitions: [TransitionScore]) -> Double {
+        transitions.reduce(0.0) { partial, score in
             partial + (1 - score.total) + (score.confidence < 0.5 ? 0.2 : 0)
         }
-        return SmartBridgeRoute(tracks: tracks, transitions: transitions, totalCost: cost)
     }
 
     private static func bridgeTargets(targetID: String?, pool: [SetaTrack], intent: JourneyIntent) -> [SetaTrack] {

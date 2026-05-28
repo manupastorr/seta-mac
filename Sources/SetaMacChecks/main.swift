@@ -641,6 +641,17 @@ func smartJourneyChecks() throws {
     let routes = SmartMixEngine.bridgeRoutes(from: "anchor", to: "weak", in: tracks)
     check(routes.allSatisfy { Set($0.tracks.map(\.id)).count == $0.tracks.count }, "bridge routes do not repeat tracks")
     check(routes.count <= SmartMixEngine.bridgeRouteLimit, "bridge route limit")
+    check(routes.allSatisfy { route in
+        let pairs = Array(zip(route.tracks, route.tracks.dropFirst()))
+        guard route.transitions.count == pairs.count else { return false }
+        return pairs.enumerated().allSatisfy { index, pair in
+            route.transitions[index] == SmartMixEngine.score(
+                from: pair.0,
+                to: pair.1,
+                intent: JourneyIntent(mode: .bridge)
+            )
+        }
+    }, "bridge route transitions reuse scored edges")
 
     var draft = SetaDraft(trackIds: ["anchor", "weak"], sortMode: .manual)
     let weakLinks = SmartMixEngine.draftWeakLinks(draft: draft, tracks: tracks)
