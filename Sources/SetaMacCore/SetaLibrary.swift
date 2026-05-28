@@ -100,6 +100,26 @@ public struct SetaLibrary: Decodable, Equatable, Sendable {
 
         return issues
     }
+
+    public func removingDuplicateTrackIDs() -> SetaLibrary {
+        var seen = Set<String>()
+        let uniqueTracks = tracks.filter { track in
+            seen.insert(track.id).inserted
+        }
+        guard uniqueTracks.count != tracks.count else { return self }
+
+        let visibleIDs = Set(uniqueTracks.map(\.id))
+        return SetaLibrary(
+            generatedAt: generatedAt,
+            tracksRoot: tracksRoot,
+            curateRoot: curateRoot,
+            tracksRoots: tracksRoots,
+            curateRoots: curateRoots,
+            trackCount: uniqueTracks.count,
+            tracks: uniqueTracks,
+            edges: edges.filter { visibleIDs.contains($0.source) && visibleIDs.contains($0.target) }
+        )
+    }
 }
 
 public struct SetaTrack: Decodable, Identifiable, Equatable, Sendable {

@@ -121,6 +121,34 @@ func validationFindsContractIssues() throws {
     check(issues.contains { $0.contains("edge score out of range") }, "detects edge score issue")
 }
 
+func duplicateTrackIDsCanBeSanitizedForDisplay() throws {
+    let json = """
+    {
+      "track_count": 3,
+      "tracks": [
+        { "id": "a", "path": "/tracks/Artist - One.wav", "source": "tracks", "bpm": 128.0, "key": "8A" },
+        { "id": "a", "path": "/tracks/Artist - Duplicate.wav", "source": "tracks", "bpm": 129.0, "key": "8A" },
+        { "id": "b", "path": "/tracks/Artist - Two.wav", "source": "tracks", "bpm": 130.0, "key": "9A" }
+      ],
+      "edges": [
+        { "source": "a", "target": "b", "score": 0.8 },
+        { "source": "a", "target": "missing", "score": 0.8 }
+      ]
+    }
+    """
+
+    let library = try decodeLibraryFixture(json)
+    check(library.validationIssues().contains { $0.contains("duplicate track id") }, "duplicate id remains reported")
+
+    let displayLibrary = library.removingDuplicateTrackIDs()
+    check(displayLibrary.trackCount == 2, "duplicate removal updates display track count")
+    check(displayLibrary.tracks.map(\.id) == ["a", "b"], "duplicate removal keeps first track id occurrence")
+    check(displayLibrary.edges.count == 1, "duplicate removal drops edges to missing ids")
+
+    let lookup = Dictionary(uniqueKeysWithValues: displayLibrary.tracks.map { ($0.id, $0) })
+    check(lookup.count == 2, "display tracks can build unique id lookup")
+}
+
 func camelotParityValues() {
     check(Camelot.compatible("8A", "8A") == 1, "same key")
     check(Camelot.compatible("8A", "8B") == 0.82, "relative major/minor")
@@ -681,6 +709,7 @@ func smartJourneyChecks() throws {
 do {
     try decodesCurrentLibraryContract()
     try validationFindsContractIssues()
+    try duplicateTrackIDsCanBeSanitizedForDisplay()
     camelotParityValues()
     try filterAndDraftHelpers()
     try playbackHelpers()

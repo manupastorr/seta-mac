@@ -331,8 +331,9 @@ extension LibraryStore {
             let data = try Data(contentsOf: url)
             let decoded = try SetaLibrary.decode(from: data)
             baseLibrary = decoded
-            let libraryWithOverrides = displayedLibrary(from: decoded)
-            let decodedIssues = libraryWithOverrides.validationIssues()
+            let visibleLibrary = visibleLibraryWithOverrides(from: decoded)
+            let libraryWithOverrides = visibleLibrary.removingDuplicateTrackIDs()
+            let decodedIssues = visibleLibrary.validationIssues()
             errorMessage = nil
             if remember {
                 settings.lastLibraryPath = url.path
@@ -405,8 +406,12 @@ extension LibraryStore {
         )
     }
 
-    private func displayedLibrary(from library: SetaLibrary) -> SetaLibrary {
+    private func visibleLibraryWithOverrides(from library: SetaLibrary) -> SetaLibrary {
         applyingTrackOverrides(to: applyingExclusions(to: library))
+    }
+
+    private func displayedLibrary(from library: SetaLibrary) -> SetaLibrary {
+        visibleLibraryWithOverrides(from: library).removingDuplicateTrackIDs()
     }
 
     private func applyTrackOverridesToCurrentLibrary() {
@@ -417,8 +422,9 @@ extension LibraryStore {
 
     private func refreshDisplayedLibrary() {
         guard let baseLibrary else { return }
-        library = displayedLibrary(from: baseLibrary)
-        issues = library?.validationIssues() ?? []
+        let visibleLibrary = visibleLibraryWithOverrides(from: baseLibrary)
+        library = visibleLibrary.removingDuplicateTrackIDs()
+        issues = visibleLibrary.validationIssues()
         invalidateLibraryDerivedCaches()
         syncPlayQueue()
     }
