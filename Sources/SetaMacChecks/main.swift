@@ -8,6 +8,26 @@ func check(_ condition: @autoclosure () -> Bool, _ message: String) {
     }
 }
 
+func decodeLibraryFixture(_ json: String) throws -> SetaLibrary {
+    try SetaLibrary.decode(from: Data(json.utf8))
+}
+
+func routesReuseScoredEdges(_ routes: [SmartBridgeRoute]) -> Bool {
+    routes.allSatisfy { route in
+        let pairs = Array(zip(route.tracks, route.tracks.dropFirst()))
+        guard route.transitions.count == pairs.count else { return false }
+        return pairs.enumerated().allSatisfy { index, pair in
+            route.transitions[index] == SmartMixEngine.score(
+                from: pair.0,
+                to: pair.1,
+                intent: JourneyIntent(mode: .bridge)
+            )
+        }
+    }
+}
+
+// MARK: - Library contract checks
+
 func decodesCurrentLibraryContract() throws {
     let json = """
     {
@@ -68,7 +88,7 @@ func decodesCurrentLibraryContract() throws {
     }
     """
 
-    let library = try SetaLibrary.decode(from: Data(json.utf8))
+    let library = try decodeLibraryFixture(json)
     check(library.trackCount == 2, "track count decodes")
     check(library.tracks[0].displayTitle == "One", "display title decodes")
     check(library.tracks[0].waveformPeak?.count == 2, "waveform decodes")
@@ -90,7 +110,7 @@ func validationFindsContractIssues() throws {
     }
     """
 
-    let issues = try SetaLibrary.decode(from: Data(json.utf8)).validationIssues()
+    let issues = try decodeLibraryFixture(json).validationIssues()
     check(issues.contains { $0.contains("track_count") }, "detects count mismatch")
     check(issues.contains { $0.contains("duplicate track id") }, "detects duplicate id")
     check(issues.contains { $0.contains("unexpected source") }, "detects source issue")
@@ -114,6 +134,8 @@ func camelotParityValues() {
     check(Camelot.colorHex(nil) == "#555770", "unknown color")
 }
 
+// MARK: - Core model checks
+
 func filterAndDraftHelpers() throws {
     let json = """
     {
@@ -126,7 +148,7 @@ func filterAndDraftHelpers() throws {
       "edges": []
     }
     """
-    let library = try SetaLibrary.decode(from: Data(json.utf8))
+    let library = try decodeLibraryFixture(json)
 
     let house = library.filteredTracks(using: LibraryFilter(query: "house"))
     check(house.map(\.id) == ["mid"], "query filter")
@@ -174,7 +196,7 @@ func playbackHelpers() throws {
       "edges": []
     }
     """
-    let library = try SetaLibrary.decode(from: Data(json.utf8))
+    let library = try decodeLibraryFixture(json)
     let filtered = library.tracks
 
     let queue = Playback.buildNavigableTracks(
@@ -236,6 +258,8 @@ func draftStoreRoundtrip() {
     check(loaded.drafts[draft.id]?.notes["x"] == "opener", "notes roundtrip")
 }
 
+// MARK: - Settings and geometry checks
+
 func setMomentsAndSettingsHelpers() throws {
     let json = """
     {
@@ -249,7 +273,7 @@ func setMomentsAndSettingsHelpers() throws {
       ]
     }
     """
-    let library = try SetaLibrary.decode(from: Data(json.utf8))
+    let library = try decodeLibraryFixture(json)
     let warm = library.tracks[0]
     check(SetMoments.matchesAnyActiveMoments(warm, activeMomentIDs: ["warmup"]), "warm track matches warmup zone")
 
@@ -312,7 +336,7 @@ func decodesLibraryRootArrays() throws {
       "edges": []
     }
     """
-    let library = try SetaLibrary.decode(from: Data(json.utf8))
+    let library = try decodeLibraryFixture(json)
     check(library.tracksRoots?.count == 2, "tracks_roots decodes")
     check(library.curateRoots?.count == 2, "curate_roots decodes")
 }
@@ -339,7 +363,7 @@ func uiGeometryChecks() throws {
       "edges": []
     }
     """
-    let library = try SetaLibrary.decode(from: Data(json.utf8))
+    let library = try decodeLibraryFixture(json)
     let track = library.tracks[0]
     let resolved = layout.resolveDisplayPositions(for: library.tracks)
     let pointA = layout.trackPoint(for: track, displayPositions: resolved)
@@ -387,7 +411,7 @@ func uiGeometryChecks() throws {
       "edges": []
     }
     """
-    let clusteredLibrary = try SetaLibrary.decode(from: Data(clusteredEnergyJSON.utf8))
+    let clusteredLibrary = try decodeLibraryFixture(clusteredEnergyJSON)
     let clusteredDomain = MapPlotLayout.computeEnergyDisplayDomain(tracks: clusteredLibrary.tracks)
     check(clusteredDomain.upperBound <= 0.95, "clustered energy domain does not waste top space")
 
@@ -402,7 +426,7 @@ func uiGeometryChecks() throws {
         )
     }.joined(separator: ",")
     let outlierJSON = #"{"track_count":30,"tracks":[\#(outlierTracks)],"edges":[]}"#
-    let outlierLibrary = try SetaLibrary.decode(from: Data(outlierJSON.utf8))
+    let outlierLibrary = try decodeLibraryFixture(outlierJSON)
     let outlierDomain = MapPlotLayout.computeEnergyDisplayDomain(tracks: outlierLibrary.tracks)
     check(outlierDomain.upperBound < 0.95, "large library ignores sparse top-energy outliers")
 
@@ -461,6 +485,8 @@ func smokeRealLibrary() throws {
     print("SetaMacLibrarySmoke: OK (\(library.tracks.count) tracks, decode \(decodeMs)ms, \(url.path))")
 }
 
+// MARK: - Import and smart journey checks
+
 func rekordboxPlaylistImport() throws {
     check(
         RekordboxPlaylistImport.normalizedPath("file://localhost/Users/me/track.wav") == "/Users/me/track.wav",
@@ -510,7 +536,7 @@ func rekordboxPlaylistImport() throws {
       "edges": []
     }
     """
-    let library = try SetaLibrary.decode(from: Data(libraryJSON.utf8))
+    let library = try decodeLibraryFixture(libraryJSON)
     let match = RekordboxPlaylistImport.matchPaths(playlists[0].paths + ["/nope.wav"], in: library.tracks)
     check(match.matchedTrackIds == ["one", "two"], "path match order")
     check(match.skippedCount == 1, "path skip missing")
@@ -526,7 +552,7 @@ func rekordboxPlaylistImport() throws {
       "edges": []
     }
     """
-    let orderLibrary = try SetaLibrary.decode(from: Data(orderJSON.utf8))
+    let orderLibrary = try decodeLibraryFixture(orderJSON)
     let ordered = RekordboxPlaylistImport.matchPaths(
         ["/c.wav", "/a.wav", "/b.wav"],
         in: orderLibrary.tracks
@@ -549,7 +575,7 @@ func trackOverrideHelpers() throws {
       "edges": []
     }
     """
-    let track = try SetaLibrary.decode(from: Data(json.utf8)).tracks[0]
+    let track = try decodeLibraryFixture(json).tracks[0]
     let override = TrackOverride.normalized(bpm: 126, key: "9A", energy: 0.75)
     let updated = track.applyingTrackOverride(override)
     check(updated.bpm == 126, "override bpm")
@@ -593,7 +619,7 @@ func smartJourneyChecks() throws {
       "edges": []
     }
     """
-    let tracks = try SetaLibrary.decode(from: Data(json.utf8)).tracks
+    let tracks = try decodeLibraryFixture(json).tracks
     let byId = Dictionary(uniqueKeysWithValues: tracks.map { ($0.id, $0) })
     let anchor = byId["anchor"]!
     let same = byId["same"]!
@@ -641,17 +667,7 @@ func smartJourneyChecks() throws {
     let routes = SmartMixEngine.bridgeRoutes(from: "anchor", to: "weak", in: tracks)
     check(routes.allSatisfy { Set($0.tracks.map(\.id)).count == $0.tracks.count }, "bridge routes do not repeat tracks")
     check(routes.count <= SmartMixEngine.bridgeRouteLimit, "bridge route limit")
-    check(routes.allSatisfy { route in
-        let pairs = Array(zip(route.tracks, route.tracks.dropFirst()))
-        guard route.transitions.count == pairs.count else { return false }
-        return pairs.enumerated().allSatisfy { index, pair in
-            route.transitions[index] == SmartMixEngine.score(
-                from: pair.0,
-                to: pair.1,
-                intent: JourneyIntent(mode: .bridge)
-            )
-        }
-    }, "bridge route transitions reuse scored edges")
+    check(routesReuseScoredEdges(routes), "bridge route transitions reuse scored edges")
 
     var draft = SetaDraft(trackIds: ["anchor", "weak"], sortMode: .manual)
     let weakLinks = SmartMixEngine.draftWeakLinks(draft: draft, tracks: tracks)

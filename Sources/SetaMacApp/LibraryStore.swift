@@ -11,6 +11,8 @@ enum MixDockTab: String, CaseIterable {
 
 @MainActor
 final class LibraryStore: ObservableObject {
+    // MARK: - Published state
+
     @Published var library: SetaLibrary?
     @Published var selectedTrackID: String?
     @Published var filter = LibraryFilter()
@@ -48,6 +50,8 @@ final class LibraryStore: ObservableObject {
     @Published var excludedTrackPaths: Set<String> = []
 
     let player = AudioPlayerController()
+
+    // MARK: - Private caches
 
     private var baseLibrary: SetaLibrary?
     private var playQueueSig = ""
@@ -272,7 +276,11 @@ final class LibraryStore: ObservableObject {
         energyDomainCache = EnergyDisplay.fallback
         invalidateSmartNeighborCache()
     }
+}
 
+// MARK: - Library metadata and loading
+
+extension LibraryStore {
     var availableKeys: [String] {
         let keys = Set((library?.tracks ?? []).compactMap { $0.key?.uppercased() })
         return keys.sorted {
@@ -350,6 +358,8 @@ final class LibraryStore: ObservableObject {
             errorMessage = error.localizedDescription
         }
     }
+
+    // MARK: - Track overrides
 
     func trackOverride(for trackId: String) -> TrackOverride? {
         trackOverrides[trackId]
@@ -429,6 +439,8 @@ final class LibraryStore: ObservableObject {
         applyTrackOverridesToCurrentLibrary()
         syncPlayQueue()
     }
+
+    // MARK: - Library folders and rescanning
 
     func rescanLibrary() {
         guard let scannerRoot = scannerRootURL else {
@@ -529,6 +541,8 @@ final class LibraryStore: ObservableObject {
         excludedTrackPaths.sorted()
     }
 
+    // MARK: - Filters and dock state
+
     func toggleSource(_ source: String) {
         if filter.sources.contains(source) && filter.sources.count > 1 {
             filter.sources.remove(source)
@@ -601,6 +615,8 @@ final class LibraryStore: ObservableObject {
         NSPasteboard.general.setString(text, forType: .string)
         statusMessage = "Draft copied."
     }
+
+    // MARK: - Rekordbox import
 
     func beginRekordboxImport() {
         showingRekordboxImport = true
@@ -703,6 +719,8 @@ final class LibraryStore: ObservableObject {
         return rekordboxImportMatchedCounts[index]
     }
 
+    // MARK: - Neighbor queue
+
     func setNeighborAnchor(_ trackId: String) {
         reanchorNeighborQueue(trackId: trackId)
     }
@@ -729,6 +747,8 @@ final class LibraryStore: ObservableObject {
         playAudio(id: trackId, keepSelection: trackId)
         queueFocusIndex = 0
     }
+
+    // MARK: - Drafts
 
     func selectDraft(id: String) {
         persistDraftNow()
@@ -807,6 +827,8 @@ final class LibraryStore: ObservableObject {
         draft.setNote(note, for: trackId)
         persistDraftSoon()
     }
+
+    // MARK: - Smart journey actions
 
     func markTransition(_ trackId: String, rating: Int) {
         guard let anchor = neighborAnchorID ?? selectedTrackID else { return }
@@ -957,6 +979,8 @@ final class LibraryStore: ObservableObject {
         updateTrackOverride(for: trackId) { $0.energy = nil }
     }
 
+    // MARK: - Playback
+
     func playSelected() {
         guard let selectedTrackID else { return }
         playTrack(id: selectedTrackID)
@@ -1060,6 +1084,8 @@ final class LibraryStore: ObservableObject {
         }
     }
 
+    // MARK: - Draft export
+
     func exportDraftM3U() {
         guard let library else { return }
         let panel = NSSavePanel()
@@ -1083,6 +1109,8 @@ final class LibraryStore: ObservableObject {
             try? text.write(to: url, atomically: true, encoding: .utf8)
         }
     }
+
+    // MARK: - Keyboard focus and search
 
     func playTrackViaView(id: String, reanchor: Bool = false) {
         guard library?.tracks.contains(where: { $0.id == id }) == true else { return }
@@ -1173,6 +1201,8 @@ final class LibraryStore: ObservableObject {
         searchResultsIndex = -1
         playTrackViaView(id: track.id)
     }
+
+    // MARK: - Persistence helpers
 
     func persistDraftSoonViaView() {
         persistDraftSoon()

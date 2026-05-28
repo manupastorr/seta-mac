@@ -181,6 +181,25 @@ public enum SmartMixEngine {
     public static let bridgePoolLimit = 300
     public static let bridgeRouteLimit = 5
 
+    private enum ScoreWeight {
+        static let key = 0.30
+        static let bpm = 0.20
+        static let energy = 0.18
+        static let phrase = 0.12
+        static let zone = 0.08
+        static let source = 0.05
+        static let feedback = 0.07
+    }
+
+    private enum ScoreThreshold {
+        static let minimumNeighborTotal = 0.42
+        static let minimumNeighborConfidence = 0.5
+        static let directBridgeRoute = 0.62
+        static let bridgeSecondHop = 0.50
+        static let routeLowConfidencePenalty = 0.2
+    }
+
+    /// Scores a directed transition from one track to the next for candidate ranking and draft analysis.
     public static func score(
         from source: SetaTrack,
         to target: SetaTrack,
@@ -208,20 +227,20 @@ public enum SmartMixEngine {
         } else {
             confidenceParts.append(1)
         }
-        components.append(TransitionComponent(name: "key", score: harmonic, weight: 0.30))
+        components.append(TransitionComponent(name: "key", score: harmonic, weight: ScoreWeight.key))
 
         let bpmScore = bpmScore(source.bpm, target.bpm, reasons: &reasons, warnings: &warnings)
-        components.append(TransitionComponent(name: "bpm", score: bpmScore, weight: 0.20))
+        components.append(TransitionComponent(name: "bpm", score: bpmScore, weight: ScoreWeight.bpm))
         confidenceParts.append(source.bpm == nil || target.bpm == nil ? 0.25 : 1)
 
         let energyScore = energyDirectionScore(from: source, to: target, mode: intent.mode, reasons: &reasons, warnings: &warnings)
-        components.append(TransitionComponent(name: "energy", score: energyScore, weight: 0.18))
-        components.append(TransitionComponent(name: "phrase", score: phraseEnergyFit(from: source, to: target, reasons: &reasons), weight: 0.12))
-        components.append(TransitionComponent(name: "zone", score: zoneScore(from: source, to: target, intent: intent, reasons: &reasons), weight: 0.08))
-        components.append(TransitionComponent(name: "source", score: genreSourceScore(from: source, to: target, reasons: &reasons), weight: 0.05))
+        components.append(TransitionComponent(name: "energy", score: energyScore, weight: ScoreWeight.energy))
+        components.append(TransitionComponent(name: "phrase", score: phraseEnergyFit(from: source, to: target, reasons: &reasons), weight: ScoreWeight.phrase))
+        components.append(TransitionComponent(name: "zone", score: zoneScore(from: source, to: target, intent: intent, reasons: &reasons), weight: ScoreWeight.zone))
+        components.append(TransitionComponent(name: "source", score: genreSourceScore(from: source, to: target, reasons: &reasons), weight: ScoreWeight.source))
 
         let feedbackScore = feedbackComponent(from: source, to: target, feedback: feedback, reasons: &reasons, warnings: &warnings)
-        components.append(TransitionComponent(name: "feedback", score: feedbackScore, weight: 0.07))
+        components.append(TransitionComponent(name: "feedback", score: feedbackScore, weight: ScoreWeight.feedback))
 
         var totalWeight = 0.0
         var weighted = 0.0
@@ -251,6 +270,7 @@ public enum SmartMixEngine {
         )
     }
 
+    /// Returns transition-ranked neighbors for a map anchor, excluding low-confidence candidates by default.
     public static func neighbors(
         for trackID: String,
         in tracks: [SetaTrack],
@@ -264,8 +284,8 @@ public enum SmartMixEngine {
             .filter { $0.id != trackID }
             .compactMap { target -> SmartNeighbor? in
                 let score = score(from: source, to: target, intent: intent, feedback: feedback)
-                if !includeLowConfidence, score.confidence < 0.5 { return nil }
-                guard score.total >= 0.42 || includeLowConfidence else { return nil }
+                if !includeLowConfidence, score.confidence < ScoreThreshold.minimumNeighborConfidence { return nil }
+                guard score.total >= ScoreThreshold.minimumNeighborTotal || includeLowConfidence else { return nil }
                 return SmartNeighbor(track: target, score: score)
             }
             .sorted { lhs, rhs in
@@ -276,6 +296,7 @@ public enum SmartMixEngine {
             .map { $0 }
     }
 
+    /// Finds direct or one-hop bridge routes from an anchor toward a target, moment, BPM range, or current pool.
     public static func bridgeRoutes(
         from sourceID: String,
         to targetID: String? = nil,
@@ -299,13 +320,13 @@ public enum SmartMixEngine {
         )
         for target in targets.prefix(60) where target.id != source.id {
             let direct = score(from: source, to: target, intent: intent, feedback: feedback)
-            if direct.total >= 0.62 {
+            if direct.total >= ScoreThreshold.directBridgeRoute {
                 routes.append(route([source, target], transitions: [direct]))
             }
 
             for mid in mids where mid.track.id != target.id {
                 let second = score(from: mid.track, to: target, intent: intent, feedback: feedback)
-                guard second.total >= 0.50 else { continue }
+                guard second.total >= ScoreThreshold.bridgeSecondHop else { continue }
                 routes.append(route([source, mid.track, target], transitions: [mid.score, second]))
             }
         }
@@ -322,6 +343,7 @@ public enum SmartMixEngine {
             .map { $0 }
     }
 
+    /// Flags weak adjacent draft transitions and suggests small bridge insertions where possible.
     public static func draftWeakLinks(
         draft: SetaDraft,
         tracks: [SetaTrack],
@@ -393,7 +415,11 @@ public enum SmartMixEngine {
 
     private static func routeCost(_ transitions: [TransitionScore]) -> Double {
         transitions.reduce(0.0) { partial, score in
-            partial + (1 - score.total) + (score.confidence < 0.5 ? 0.2 : 0)
+            partial + (1 - score.total) + (
+                score.confidence < ScoreThreshold.minimumNeighborConfidence
+                    ? ScoreThreshold.routeLowConfidencePenalty
+                    : 0
+            )
         }
     }
 

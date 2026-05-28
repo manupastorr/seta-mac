@@ -1,24 +1,32 @@
 import SwiftUI
 import SetaMacCore
 
-struct TrackMapView: View {
-    let tracks: [SetaTrack]
-    @Binding var selectedTrackID: String?
-    @Binding var hoveredTrackID: String?
-    var playingTrackID: String?
-    var neighborHighlightIDs: Set<String> = []
+struct TrackMapHighlightState {
+    var neighborIDs: Set<String> = []
     var riskyNeighborIDs: Set<String> = []
     var neighborAnchorID: String?
     var draftTrackIDs: Set<String> = []
     var draftFinalIDs: Set<String> = []
-    var mixLinks: [(SetaTrack, SetaTrack)] = []
-    var showSetZoneOverlay: Bool = true
+}
+
+struct TrackMapChromeState {
+    var showSetZoneOverlay = true
     var activeMomentIDs: Set<String> = []
     var energyDomain: ClosedRange<Double> = MapPlotMetrics.energyDomain
     var mixDockWidth: CGFloat = 0
     var rightChrome: CGFloat = 0
     var topChrome: CGFloat = SetaTheme.filterBarHeight + 6
     var bottomChrome: CGFloat = SetaTheme.playerHeight + 10
+}
+
+struct TrackMapView: View {
+    let tracks: [SetaTrack]
+    @Binding var selectedTrackID: String?
+    @Binding var hoveredTrackID: String?
+    var playingTrackID: String?
+    var highlights = TrackMapHighlightState()
+    var mixLinks: [(SetaTrack, SetaTrack)] = []
+    var chrome = TrackMapChromeState()
     var resetTrigger: UUID = UUID()
     var trackOverrides: [String: TrackOverride] = [:]
     var onPlayTrack: ((String) -> Void)?
@@ -43,11 +51,11 @@ struct TrackMapView: View {
         GeometryReader { proxy in
             let layout = MapPlotLayout(
                 canvasSize: proxy.size,
-                mixDockWidth: mixDockWidth,
-                rightChrome: rightChrome,
-                topChrome: topChrome,
-                bottomChrome: bottomChrome,
-                energyDomain: energyDomain
+                mixDockWidth: chrome.mixDockWidth,
+                rightChrome: chrome.rightChrome,
+                topChrome: chrome.topChrome,
+                bottomChrome: chrome.bottomChrome,
+                energyDomain: chrome.energyDomain
             )
             let cacheKey = displayPositionCacheKey(layout: layout, tracks: tracks)
             let displayPositions = displayPositionsKey == cacheKey ? displayPositionsCache : [:]
@@ -296,7 +304,7 @@ struct TrackMapView: View {
         Canvas { context, size in
             context.concatenate(mapContentTransform(canvasSize: size, origin: origin))
             drawGrid(context: &context, layout: layout)
-            if showSetZoneOverlay {
+            if chrome.showSetZoneOverlay {
                 drawSetMoments(context: &context, layout: layout)
             }
             drawMixLinks(context: &context, layout: layout, displayPositions: displayPositions)
@@ -367,7 +375,7 @@ struct TrackMapView: View {
             layout: layout,
             tracks: tracks,
             displayPositions: displayPositions,
-            neighborIDs: neighborHighlightIDs,
+            neighborIDs: highlights.neighborIDs,
             playingID: playingTrackID
         )
         .position(x: center.x, y: center.y)
@@ -429,12 +437,12 @@ struct TrackMapView: View {
     }
 
     private func drawSetMoments(context: inout GraphicsContext, layout: MapPlotLayout) {
-        let filtering = !activeMomentIDs.isEmpty
+        let filtering = !chrome.activeMomentIDs.isEmpty
         let tickBandTop = layout.plotHeight - MapPlotMetrics.Inset.bottom - 8
 
         for moment in SetMoments.all {
             let ellipse = layout.momentEllipse(moment)
-            let active = activeMomentIDs.isEmpty || activeMomentIDs.contains(moment.id)
+            let active = chrome.activeMomentIDs.isEmpty || chrome.activeMomentIDs.contains(moment.id)
             let belowView = layout.momentBelowDisplayView(moment)
             var fillOpacity = filtering ? (active ? 0.18 : 0.035) : 0.09
             if belowView { fillOpacity *= 0.45 }
@@ -479,9 +487,9 @@ struct TrackMapView: View {
         layout: MapPlotLayout,
         displayPositions: [String: CGPoint]
     ) {
-        let anchor = neighborAnchorID
-        let neighbors = neighborHighlightIDs
-        let risky = riskyNeighborIDs
+        let anchor = highlights.neighborAnchorID
+        let neighbors = highlights.neighborIDs
+        let risky = highlights.riskyNeighborIDs
         let skipHoveredInCanvas = !showsLoupe && hoveredTrackID != nil
 
         for track in tracks {
@@ -516,8 +524,8 @@ struct TrackMapView: View {
         let isNeighbor = neighbors.contains(track.id)
         let isRisky = risky.contains(track.id)
         let isHovered = track.id == hoveredTrackID
-        let isDraft = draftTrackIDs.contains(track.id)
-        let isFinal = draftFinalIDs.contains(track.id)
+        let isDraft = highlights.draftTrackIDs.contains(track.id)
+        let isFinal = highlights.draftFinalIDs.contains(track.id)
 
         let radius: CGFloat
         if zoomHighlight {
@@ -528,13 +536,7 @@ struct TrackMapView: View {
         let rect = CGRect(x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2)
         var color = Color(hex: Camelot.colorHex(track.key))
 
-        if neighbors.isEmpty {
-            // full opacity
-        } else if isNeighbor, !isSelected {
-            color = color.opacity(0.95)
-        } else if !isNeighbor, !isSelected {
-            color = color.opacity(0.2)
-        }
+        color = color.opacity(highlightOpacity(neighbors: neighbors, isNeighbor: isNeighbor, isSelected: isSelected))
         if isRisky, !isSelected {
             color = color.opacity(0.45)
         }
@@ -573,5 +575,10 @@ struct TrackMapView: View {
                 lineWidth: 1.25
             )
         }
+    }
+
+    private func highlightOpacity(neighbors: Set<String>, isNeighbor: Bool, isSelected: Bool) -> Double {
+        if neighbors.isEmpty || isSelected { return 1 }
+        return isNeighbor ? 0.95 : 0.2
     }
 }

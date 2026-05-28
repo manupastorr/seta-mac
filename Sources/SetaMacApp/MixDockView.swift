@@ -301,71 +301,88 @@ struct DraftPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                TextField("Set draft name", text: $store.draft.name)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(SetaTheme.text)
-                    .tint(SetaTheme.accent)
-                    .onSubmit { store.persistDraftSoonViaView() }
-                Text(draftCountLabel)
-                    .font(.system(size: 10))
-                    .foregroundStyle(SetaTheme.muted)
-            }
-            HStack(spacing: 5) {
-                draftSortChip("Energy", .energy)
-                draftSortChip("BPM", .bpm)
-                draftSortChip("Manual", .manual)
-            }
-            VStack(spacing: 5) {
-                HStack(spacing: 5) {
-                    SetaSecondaryButton(title: "Play draft", expand: true) { store.playDraftFromStart() }
-                    SetaSecondaryButton(title: "Analyze draft", expand: true) { store.analyzeDraft() }
-                }
-                HStack(spacing: 5) {
-                    SetaSecondaryButton(title: "Import Rekordbox", expand: true) { store.beginRekordboxImport() }
-                    SetaSecondaryButton(title: "Export M3U", expand: true) { store.exportDraftM3U() }
-                }
-                HStack(spacing: 5) {
-                    SetaSecondaryButton(title: "Copy list", expand: true) { store.copyDraftListToPasteboard() }
-                }
-            }
+            draftHeader
+            draftSortControls
+            draftActions
             if !store.draftTracks.isEmpty {
                 DraftEnergyRampView(tracks: store.draftTracks)
             }
             if !store.draftWeakLinks.isEmpty {
                 DraftWeakLinksView(store: store)
             }
-            if store.draftTracks.isEmpty {
-                Text("No tracks yet — select a track and press a to add.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(SetaTheme.muted)
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 2) {
-                        ForEach(Array(store.draftTracks.enumerated()), id: \.element.id) { index, track in
-                            DraftTrackRow(
-                                track: track,
-                                isFinal: store.draft.finalIds.contains(track.id),
-                                isSelected: store.selectedTrackID == track.id,
-                                isPlaying: store.playingTrackID == track.id,
-                                isQueueFocus: store.queueFocusTrackID == track.id,
-                                note: store.draft.notes[track.id] ?? "",
-                                onToggleFinal: { store.toggleFinal(track.id) },
-                                onRemove: { store.removeFromDraft(track.id) },
-                                onReorder: { draggedId in
-                                    store.moveDraftTrack(id: draggedId, toIndex: index)
-                                },
-                                onNoteCommit: { store.setDraftNote($0, for: track.id) },
-                                onSelect: { store.playDraftTrack(track.id) }
-                            )
-                        }
-                    }
-                }
-                .frame(maxHeight: .infinity)
-            }
+            draftTrackList
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var draftHeader: some View {
+        HStack {
+            TextField("Set draft name", text: $store.draft.name)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(SetaTheme.text)
+                .tint(SetaTheme.accent)
+                .onSubmit { store.persistDraftSoonViaView() }
+            Text(draftCountLabel)
+                .font(.system(size: 10))
+                .foregroundStyle(SetaTheme.muted)
+        }
+    }
+
+    private var draftSortControls: some View {
+        HStack(spacing: 5) {
+            draftSortChip("Energy", .energy)
+            draftSortChip("BPM", .bpm)
+            draftSortChip("Manual", .manual)
+        }
+    }
+
+    private var draftActions: some View {
+        VStack(spacing: 5) {
+            HStack(spacing: 5) {
+                SetaSecondaryButton(title: "Play draft", expand: true) { store.playDraftFromStart() }
+                SetaSecondaryButton(title: "Analyze draft", expand: true) { store.analyzeDraft() }
+            }
+            HStack(spacing: 5) {
+                SetaSecondaryButton(title: "Import Rekordbox", expand: true) { store.beginRekordboxImport() }
+                SetaSecondaryButton(title: "Export M3U", expand: true) { store.exportDraftM3U() }
+            }
+            HStack(spacing: 5) {
+                SetaSecondaryButton(title: "Copy list", expand: true) { store.copyDraftListToPasteboard() }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var draftTrackList: some View {
+        if store.draftTracks.isEmpty {
+            Text("No tracks yet — select a track and press a to add.")
+                .font(.system(size: 11))
+                .foregroundStyle(SetaTheme.muted)
+        } else {
+            ScrollView {
+                LazyVStack(spacing: 2) {
+                    ForEach(Array(store.draftTracks.enumerated()), id: \.element.id) { index, track in
+                        DraftTrackRow(
+                            track: track,
+                            isFinal: store.draft.finalIds.contains(track.id),
+                            isSelected: store.selectedTrackID == track.id,
+                            isPlaying: store.playingTrackID == track.id,
+                            isQueueFocus: store.queueFocusTrackID == track.id,
+                            note: store.draft.notes[track.id] ?? "",
+                            onToggleFinal: { store.toggleFinal(track.id) },
+                            onRemove: { store.removeFromDraft(track.id) },
+                            onReorder: { draggedId in
+                                store.moveDraftTrack(id: draggedId, toIndex: index)
+                            },
+                            onNoteCommit: { store.setDraftNote($0, for: track.id) },
+                            onSelect: { store.playDraftTrack(track.id) }
+                        )
+                    }
+                }
+            }
+            .frame(maxHeight: .infinity)
+        }
     }
 
     private var draftCountLabel: String {
