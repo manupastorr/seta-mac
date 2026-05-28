@@ -26,6 +26,24 @@ public struct LibraryFolderEntry: Codable, Equatable, Identifiable, Sendable {
 }
 
 public enum FolderBookmarkAccess {
+    public struct ScopedFolder: Sendable {
+        public let url: URL
+        private let shouldStopAccessing: Bool
+
+        public var path: String { url.path }
+
+        fileprivate init(url: URL, shouldStopAccessing: Bool) {
+            self.url = url
+            self.shouldStopAccessing = shouldStopAccessing
+        }
+
+        public func stopAccessing() {
+            if shouldStopAccessing {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+    }
+
     public static func bookmarkData(for url: URL) -> Data? {
         do {
             return try url.bookmarkData(
@@ -47,17 +65,17 @@ public enum FolderBookmarkAccess {
                 relativeTo: nil,
                 bookmarkDataIsStale: &stale
             )
-            _ = url.startAccessingSecurityScopedResource()
             return url
         } catch {
             return nil
         }
     }
 
-    public static func resolvedPath(for entry: LibraryFolderEntry) -> String? {
+    public static func startAccessing(_ entry: LibraryFolderEntry) -> ScopedFolder? {
         if let bookmarkData = entry.bookmarkData,
            let url = resolveURL(from: bookmarkData) {
-            return url.path
+            let accessed = url.startAccessingSecurityScopedResource()
+            return ScopedFolder(url: url, shouldStopAccessing: accessed)
         }
         let path = entry.path.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !path.isEmpty else { return nil }
@@ -66,7 +84,13 @@ public enum FolderBookmarkAccess {
               isDirectory.boolValue else {
             return nil
         }
-        return path
+        return ScopedFolder(url: URL(fileURLWithPath: path), shouldStopAccessing: false)
+    }
+
+    public static func resolvedPath(for entry: LibraryFolderEntry) -> String? {
+        guard let folder = startAccessing(entry) else { return nil }
+        defer { folder.stopAccessing() }
+        return folder.path
     }
 }
 

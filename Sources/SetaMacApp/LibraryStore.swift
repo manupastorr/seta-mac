@@ -453,26 +453,32 @@ extension LibraryStore {
             return
         }
         isRescanning = true
-        let tracksRoots = settings.resolvedTracksRootPaths()
-        let curateRoots = settings.resolvedCurateRootPaths()
+        let tracksAccess = settings.startAccessingTracksRoots()
+        let curateAccess = settings.startAccessingCurateRoots()
+        let tracksRoots = tracksAccess.map(\.path)
+        let curateRoots = curateAccess.map(\.path)
         let excluded = Array(excludedTrackPaths)
         Task {
-            let result = LibraryScanner.scanLibrary(
-                at: scannerRoot,
-                tracksRoots: tracksRoots,
-                curateRoots: curateRoots,
-                excludedPaths: excluded,
-                quick: true
-            )
-            await MainActor.run {
-                isRescanning = false
-                if result.exitCode == 0 {
-                    let libraryURL = scannerRoot.appendingPathComponent("library.json")
-                    load(url: libraryURL)
-                    statusMessage = "Library rescanned."
-                } else {
-                    statusMessage = "Scan failed: \(result.output.trimmingCharacters(in: .whitespacesAndNewlines))"
-                }
+            defer {
+                tracksAccess.forEach { $0.stopAccessing() }
+                curateAccess.forEach { $0.stopAccessing() }
+            }
+            let result = await Task.detached(priority: .userInitiated) {
+                LibraryScanner.scanLibrary(
+                    at: scannerRoot,
+                    tracksRoots: tracksRoots,
+                    curateRoots: curateRoots,
+                    excludedPaths: excluded,
+                    quick: true
+                )
+            }.value
+            isRescanning = false
+            if result.exitCode == 0 {
+                let libraryURL = scannerRoot.appendingPathComponent("library.json")
+                load(url: libraryURL)
+                statusMessage = "Library rescanned."
+            } else {
+                statusMessage = "Scan failed: \(result.output.trimmingCharacters(in: .whitespacesAndNewlines))"
             }
         }
     }
@@ -1220,9 +1226,12 @@ extension LibraryStore {
         guard let track = library?.tracks.first(where: { $0.id == id }) else { return }
         selectedTrackID = selectedId
         guard Date() >= suppressPlaybackUntil else { return }
-        playingTrackID = id
-        playIndex = Playback.resolvePlayIndex(queue: playQueue, trackId: id)
-        player.play(track: track)
+        if player.play(track: track) {
+            playingTrackID = id
+            playIndex = Playback.resolvePlayIndex(queue: playQueue, trackId: id)
+        } else {
+            playingTrackID = nil
+        }
     }
 
     private func restoreDraft() {

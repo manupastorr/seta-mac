@@ -15,9 +15,10 @@ final class AudioPlayerController: NSObject, ObservableObject, AVAudioPlayerDele
     private var player: AVAudioPlayer?
     private var progressTimer: Timer?
 
-    func play(track: SetaTrack) {
+    @discardableResult
+    func play(track: SetaTrack) -> Bool {
+        stop()
         do {
-            stopProgressTimer()
             let url = URL(fileURLWithPath: track.path)
             player = try AVAudioPlayer(contentsOf: url)
             player?.delegate = self
@@ -29,10 +30,15 @@ final class AudioPlayerController: NSObject, ObservableObject, AVAudioPlayerDele
             isPlaying = true
             errorMessage = nil
             startProgressTimer()
+            return true
         } catch {
+            player = nil
             errorMessage = error.localizedDescription
             isPlaying = false
             currentTrack = nil
+            duration = 0
+            currentTime = 0
+            return false
         }
     }
 

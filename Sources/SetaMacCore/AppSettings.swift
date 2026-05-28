@@ -35,6 +35,14 @@ public struct AppSettings: Codable, Equatable {
         curateFolders.compactMap { FolderBookmarkAccess.resolvedPath(for: $0) }
     }
 
+    public func startAccessingTracksRoots() -> [FolderBookmarkAccess.ScopedFolder] {
+        tracksFolders.compactMap { FolderBookmarkAccess.startAccessing($0) }
+    }
+
+    public func startAccessingCurateRoots() -> [FolderBookmarkAccess.ScopedFolder] {
+        curateFolders.compactMap { FolderBookmarkAccess.startAccessing($0) }
+    }
+
     public static func load(from defaults: UserDefaults = .standard) -> AppSettings {
         guard let data = defaults.data(forKey: storageKey),
               let settings = try? JSONDecoder().decode(AppSettings.self, from: data) else {
@@ -63,7 +71,7 @@ public struct AppSettings: Codable, Equatable {
 }
 
 public enum LibraryScanner {
-    public struct ScanResult: Equatable {
+    public struct ScanResult: Equatable, Sendable {
         public var exitCode: Int32
         public var output: String
 
@@ -98,15 +106,37 @@ public enum LibraryScanner {
         process.currentDirectoryURL = scannerRoot
         process.standardOutput = pipe
         process.standardError = pipe
+        let collector = ScannerOutputCollector()
 
         do {
             try process.run()
+            collector.startReading(pipe.fileHandleForReading)
             process.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            collector.waitForOutput()
+            let data = collector.output
             let output = String(data: data, encoding: .utf8) ?? ""
             return ScanResult(exitCode: process.terminationStatus, output: output)
         } catch {
             return ScanResult(exitCode: 1, output: error.localizedDescription)
         }
     }
+}
+
+private final class ScannerOutputCollector: @unchecked Sendable {
+    private var data = Data()
+    private let group = DispatchGroup()
+
+    func startReading(_ handle: FileHandle) {
+        group.enter()
+        DispatchQueue.global(qos: .userInitiated).async {
+            self.data = handle.readDataToEndOfFile()
+            self.group.leave()
+        }
+    }
+
+    func waitForOutput() {
+        group.wait()
+    }
+
+    var output: Data { data }
 }
