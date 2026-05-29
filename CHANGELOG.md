@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.4
+
+- Show live scan progress with track counts and estimated time remaining during **Rescan library**.
+- Stream scanner output in real time; keep the Library folders sheet open while scanning.
+
 ## 0.3.3
 
 - Fix **Rescan library** not writing `library.json` (bundled `scan_library.py` missing CLI entrypoint).
