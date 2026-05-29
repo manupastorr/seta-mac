@@ -327,6 +327,7 @@ func librarySourcesChecks() {
         excludedPaths: ["/tracks/a/hide.wav"]
     )
     check(args.contains("--skip-edges"), "scanner args quick")
+    check(args.contains("--explicit-roots"), "scanner args explicit roots")
     check(args.filter { $0 == "--tracks-root" }.count == 2, "scanner args tracks roots")
     check(args.contains("--curate-root"), "scanner args curate root")
     check(args.contains("--exclude-path"), "scanner args exclude path")
@@ -780,8 +781,21 @@ func scannerPathsChecks() throws {
         homeDirectory: homeOverride,
         fileManager: fileManager
     )
-    check(candidates.contains(ScannerPaths.libraryJSON(at: appSupport)), "library candidates include app support scanner")
-    check(!candidates.contains(ScannerPaths.libraryJSON(at: legacy)), "library candidates skip legacy scanner path")
+    check(candidates.isEmpty, "library candidates skip scanner library without configured folders")
+
+    let configuredFolderSettings = AppSettings(
+        tracksFolders: [LibraryFolderEntry(path: "/tmp/tracks")]
+    )
+    let candidatesWithFolders = ScannerPaths.defaultLibraryCandidates(
+        settings: configuredFolderSettings,
+        homeDirectory: homeOverride,
+        fileManager: fileManager
+    )
+    check(
+        candidatesWithFolders.contains(ScannerPaths.libraryJSON(at: appSupport)),
+        "library candidates include app support scanner when folders are configured"
+    )
+    check(!candidatesWithFolders.contains(ScannerPaths.libraryJSON(at: legacy)), "library candidates skip legacy scanner path")
 
     check(
         !ScannerPaths.needsInAppSetup(
@@ -915,6 +929,12 @@ func bundledScannerReleaseChecks() {
         !fileManager.fileExists(atPath: scannerRoot.appendingPathComponent("library.json").path),
         "release bundle excludes library.json"
     )
+    if let scriptData = try? Data(contentsOf: scannerRoot.appendingPathComponent("scan_library.py")),
+       let script = String(data: scriptData, encoding: .utf8) {
+        check(script.contains("if __name__ == \"__main__\":"), "scan_library.py exposes CLI entrypoint")
+    } else {
+        check(false, "scan_library.py is readable in release bundle")
+    }
 }
 
 do {

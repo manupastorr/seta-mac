@@ -117,7 +117,8 @@ public enum ScannerPaths {
             appendCandidate(URL(fileURLWithPath: last))
         }
 
-        if let root = preferredScannerRoot(
+        if settings.hasConfiguredFolders,
+           let root = preferredScannerRoot(
             settings: settings,
             bundle: bundle,
             devSiblingSourceFilePath: devSiblingSourceFilePath,

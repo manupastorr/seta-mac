@@ -119,7 +119,7 @@ public enum LibraryScannerArguments {
         curateRoots: [String],
         excludedPaths: [String]
     ) -> [String] {
-        var args: [String] = []
+        var args: [String] = ["--explicit-roots"]
         if quick {
             args.append("--skip-edges")
         }
