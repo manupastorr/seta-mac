@@ -9,17 +9,24 @@ Requirements
 
 2) First open (Gatekeeper)
    Right-click SetaMac.app → Open → Open.
-   Or: xattr -cr /path/to/SetaMac.app
+
+   If macOS says the app is "damaged":
+   - Click Cancel (do not move to Trash)
+   - Open Terminal: Command+Space, type Terminal, press Return
+   - Paste: xattr -cr /Applications/SetaMac.app
+   - Press Return, then open SetaMac again
 
 3) First-time setup in SetaMac
    Open SetaMac → Start setup → wait until it finishes.
-   No git or Terminal required.
+   No git required.
 
 4) Add music folders
    Library → Library Folders…
    Add your Library and Incoming folders → Rescan library.
 
 Your music stays on disk. Seta only reads folders you choose.
+
+More help: docs/DOWNLOAD.md in the GitHub repo.
 
 Developer scanner repo (optional): https://github.com/manupastorr/seta
 

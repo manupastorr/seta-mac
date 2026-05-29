@@ -18,7 +18,7 @@ Start from a seed track, explore smart candidates and bridge routes, repair weak
 
 ![SetaMac map-first set journey view](docs/screenshots/01-map-overview.png)
 
-Full install guide and screenshots: **[docs/DOWNLOAD.md](docs/DOWNLOAD.md)**.
+Full install guide and screenshots: **[docs/DOWNLOAD.md](docs/DOWNLOAD.md)** (includes help if macOS blocks the app).
 
 ## Notes
 
