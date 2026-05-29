@@ -766,6 +766,77 @@ func scannerPathsChecks() throws {
     check(candidates.contains(ScannerPaths.libraryJSON(at: legacy)), "library candidates include legacy scanner")
 }
 
+func scannerInstallerChecks() throws {
+    let fileManager = FileManager.default
+    let tempRoot = fileManager.temporaryDirectory.appendingPathComponent("seta-mac-scanner-installer-\(UUID().uuidString)", isDirectory: true)
+    try fileManager.createDirectory(at: tempRoot, withIntermediateDirectories: true)
+
+    defer {
+        try? fileManager.removeItem(at: tempRoot)
+    }
+
+    let bundled = tempRoot.appendingPathComponent("bundled", isDirectory: true)
+    let destination = tempRoot.appendingPathComponent("destination", isDirectory: true)
+    let ignored = bundled.appendingPathComponent(".venv/bin", isDirectory: true)
+    try fileManager.createDirectory(at: ignored, withIntermediateDirectories: true)
+    fileManager.createFile(atPath: ignored.appendingPathComponent("python").path, contents: Data())
+    fileManager.createFile(atPath: bundled.appendingPathComponent("scan_library.py").path, contents: Data("print('ok')".utf8))
+    fileManager.createFile(atPath: bundled.appendingPathComponent("requirements.txt").path, contents: Data())
+    fileManager.createFile(atPath: bundled.appendingPathComponent("library.json").path, contents: Data("{}".utf8))
+
+    try ScannerInstaller.syncScannerFiles(from: bundled, to: destination, fileManager: fileManager)
+    check(fileManager.fileExists(atPath: destination.appendingPathComponent("scan_library.py").path), "installer sync copies scanner script")
+    check(fileManager.fileExists(atPath: destination.appendingPathComponent("requirements.txt").path), "installer sync copies requirements")
+    check(!fileManager.fileExists(atPath: destination.appendingPathComponent("library.json").path), "installer sync skips library.json")
+    check(!fileManager.fileExists(atPath: destination.appendingPathComponent(".venv/bin/python").path), "installer sync skips bundled venv")
+
+    check(ScannerInstaller.needsInstall(destinationRoot: destination, fileManager: fileManager), "installer needed without venv")
+
+    let missingBundle = ScannerInstaller.install(
+        bundledRoot: tempRoot.appendingPathComponent("missing"),
+        destinationRoot: destination
+    )
+    check(!missingBundle.success, "installer fails when bundled scanner is missing")
+
+    let missingPython = ScannerInstaller.install(
+        bundledRoot: bundled,
+        destinationRoot: destination.appendingPathComponent("no-python", isDirectory: true),
+        python3Executable: URL(fileURLWithPath: "/tmp/seta-mac-missing-python")
+    )
+    check(!missingPython.success, "installer fails when python3 is unavailable")
+    check(missingPython.message.localizedCaseInsensitiveContains("python"), "installer reports missing python")
+
+    let readyRoot = tempRoot.appendingPathComponent("ready", isDirectory: true)
+    try fileManager.createDirectory(at: readyRoot, withIntermediateDirectories: true)
+    fileManager.createFile(atPath: readyRoot.appendingPathComponent("scan_library.py").path, contents: Data())
+    let readyPython = readyRoot.appendingPathComponent(".venv/bin", isDirectory: true)
+    try fileManager.createDirectory(at: readyPython, withIntermediateDirectories: true)
+    fileManager.createFile(atPath: readyPython.appendingPathComponent("python").path, contents: Data())
+    try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: readyPython.appendingPathComponent("python").path)
+    let alreadyReady = ScannerInstaller.install(
+        bundledRoot: bundled,
+        destinationRoot: readyRoot
+    )
+    check(alreadyReady.success, "installer skips work when scanner is already ready")
+
+    var phases: [ScannerInstallerPhase] = []
+    if let python3 = ScannerInstaller.systemPython3(fileManager: fileManager) {
+        let installDestination = tempRoot.appendingPathComponent("installed", isDirectory: true)
+        let installed = ScannerInstaller.install(
+            bundledRoot: bundled,
+            destinationRoot: installDestination,
+            python3Executable: python3,
+            phaseHandler: { phases.append($0) }
+        )
+        check(installed.success, "installer completes with system python3")
+        check(ScannerPaths.isScannerReady(at: installDestination, fileManager: fileManager), "installer leaves scanner ready")
+        check(phases.first == .preparing, "installer reports preparing phase")
+        check(phases.last == .finished, "installer reports finished phase")
+    } else {
+        print("ScannerInstaller: skipped full install (python3 not found)")
+    }
+}
+
 do {
     try decodesCurrentLibraryContract()
     try validationFindsContractIssues()
@@ -782,6 +853,7 @@ do {
     try trackOverrideHelpers()
     try smartJourneyChecks()
     try scannerPathsChecks()
+    try scannerInstallerChecks()
     try smokeRealLibrary()
     print("SetaMacChecks: OK")
 } catch {
