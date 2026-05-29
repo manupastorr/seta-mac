@@ -16,7 +16,7 @@ Local-first macOS app for building DJ set drafts from a map of your library. Sta
 
 - Have your music already in folders on your Mac.
 - Allow about 10 minutes for the first launch.
-- macOS may ask you to confirm SetaMac is safe to open — that is normal for apps outside the App Store.
+- macOS may block the first open — or say **“damaged”** — because SetaMac is not from the App Store yet. That is normal; see [If macOS blocks the app](#if-macos-blocks-the-app).
 
 ## Install
 

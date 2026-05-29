@@ -12,13 +12,13 @@ Start from a seed track, explore smart candidates and bridge routes, repair weak
 
 1. Download `SetaMac-0.3.1-macos14.zip` from [Releases](https://github.com/manupastorr/seta-mac/releases).
 2. Unzip it and move **SetaMac.app** to Applications.
-3. First launch: right-click **SetaMac.app** → **Open**.
-4. In SetaMac, run the one-time **Start setup** flow (internet required once).
-5. Add your music folders in **Library → Library Folders…**, then click **Rescan library**.
+3. **Open it:** right-click **SetaMac.app** → **Open** → **Open**.  
+   macOS says **“damaged”**? Click **Cancel**, then follow [these steps](docs/DOWNLOAD.md#if-macos-blocks-the-app) (one Terminal line).
+4. **In the app:** click **Start setup** and wait (internet once). Then **Library → Library Folders…** → add music → **Rescan library**.
 
 ![SetaMac map-first set journey view](docs/screenshots/01-map-overview.png)
 
-Full guide: **[docs/DOWNLOAD.md](docs/DOWNLOAD.md)** — includes help if macOS says the app is damaged.
+More detail: **[docs/DOWNLOAD.md](docs/DOWNLOAD.md)**
 
 ## Notes
 
