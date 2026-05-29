@@ -470,11 +470,11 @@ func uiGeometryChecks() throws {
 
 func smokeRealLibrary() throws {
     let envPath = ProcessInfo.processInfo.environment["SETA_LIBRARY_PATH"]
-    let home = FileManager.default.homeDirectoryForCurrentUser.path
-    let candidates = [
-        envPath.map { URL(fileURLWithPath: $0) },
-        URL(fileURLWithPath: "\(home)/Music/tracks/tools/seta/library.json")
-    ].compactMap { $0 }
+    var candidates: [URL] = []
+    if let envPath {
+        candidates.append(URL(fileURLWithPath: envPath))
+    }
+    candidates.append(contentsOf: AppSettings.defaultLibraryCandidates())
 
     guard let url = candidates.first(where: { FileManager.default.fileExists(atPath: $0.path) }) else {
         print("SetaMacLibrarySmoke: skipped (no library.json found)")
@@ -720,6 +720,10 @@ func scannerPathsChecks() throws {
     try fileManager.createDirectory(at: appSupport, withIntermediateDirectories: true)
     fileManager.createFile(atPath: appSupport.appendingPathComponent("scan_library.py").path, contents: Data())
 
+    let configuredRoot = tempRoot.appendingPathComponent("configured-scanner", isDirectory: true)
+    try fileManager.createDirectory(at: configuredRoot, withIntermediateDirectories: true)
+    fileManager.createFile(atPath: configuredRoot.appendingPathComponent("scan_library.py").path, contents: Data())
+
     let legacy = tempRoot.appendingPathComponent("Music/tracks/tools/seta", isDirectory: true)
     try fileManager.createDirectory(at: legacy, withIntermediateDirectories: true)
     fileManager.createFile(atPath: legacy.appendingPathComponent("scan_library.py").path, contents: Data())
@@ -731,13 +735,13 @@ func scannerPathsChecks() throws {
     )
     check(appSupportRoot.path.hasSuffix("Library/Application Support/SetaMac/scanner"), "application support scanner path")
 
-    let settings = AppSettings(setaScannerRoot: legacy.path)
+    let settings = AppSettings(setaScannerRoot: configuredRoot.path)
     let preferred = ScannerPaths.preferredScannerRoot(
         settings: settings,
         homeDirectory: homeOverride,
         fileManager: fileManager
     )
-    check(preferred?.path == legacy.path, "configured scanner root wins")
+    check(preferred?.path == configuredRoot.path, "configured scanner root wins")
 
     let fallbackSettings = AppSettings()
     let fallbackPreferred = ScannerPaths.preferredScannerRoot(
@@ -746,6 +750,19 @@ func scannerPathsChecks() throws {
         fileManager: fileManager
     )
     check(fallbackPreferred?.path == appSupport.path, "application support scanner root is preferred fallback")
+
+    let otherHome = tempRoot.appendingPathComponent("other-home", isDirectory: true)
+    let legacyOnly = otherHome.appendingPathComponent("Music/tracks/tools/seta", isDirectory: true)
+    try fileManager.createDirectory(at: legacyOnly, withIntermediateDirectories: true)
+    fileManager.createFile(atPath: legacyOnly.appendingPathComponent("scan_library.py").path, contents: Data())
+    check(
+        ScannerPaths.preferredScannerRoot(
+            settings: AppSettings(),
+            homeDirectory: otherHome,
+            fileManager: fileManager
+        ) == nil,
+        "legacy scanner path is not auto-discovered"
+    )
 
     let readyRoot = tempRoot.appendingPathComponent("ready-scanner", isDirectory: true)
     try fileManager.createDirectory(at: readyRoot, withIntermediateDirectories: true)
@@ -763,7 +780,7 @@ func scannerPathsChecks() throws {
         fileManager: fileManager
     )
     check(candidates.contains(ScannerPaths.libraryJSON(at: appSupport)), "library candidates include app support scanner")
-    check(candidates.contains(ScannerPaths.libraryJSON(at: legacy)), "library candidates include legacy scanner")
+    check(!candidates.contains(ScannerPaths.libraryJSON(at: legacy)), "library candidates skip legacy scanner path")
 
     check(
         !ScannerPaths.needsInAppSetup(

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- Stop auto-discovering the scanner at `~/Music/tracks/tools/seta`; use Application Support, bundled setup, dev sibling, or an explicitly saved scanner path.
+
 ## 0.3.0
 
 - First-run setup: SetaMac installs its bundled scanner locally with no git or Terminal.

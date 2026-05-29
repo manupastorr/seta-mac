@@ -18,15 +18,6 @@ public enum ScannerPaths {
             .appendingPathComponent(scannerDirectoryName, isDirectory: true)
     }
 
-    public static func legacyDefaultScannerRoot(
-        homeDirectory: URL? = nil,
-        fileManager: FileManager = .default
-    ) -> URL {
-        let home = homeDirectory ?? fileManager.homeDirectoryForCurrentUser
-        return home
-            .appendingPathComponent("Music/tracks/tools/seta", isDirectory: true)
-    }
-
     public static func bundledScannerRoot(
         bundle: Bundle = .main,
         fileManager: FileManager = .default
@@ -97,11 +88,6 @@ public enum ScannerPaths {
             return sibling
         }
 
-        let legacy = legacyDefaultScannerRoot(homeDirectory: homeDirectory, fileManager: fileManager)
-        if isScannerInstalled(at: legacy, fileManager: fileManager) {
-            return legacy
-        }
-
         return nil
     }
 
@@ -140,9 +126,6 @@ public enum ScannerPaths {
             appendCandidate(libraryJSON(at: root))
         }
 
-        appendCandidate(
-            libraryJSON(at: legacyDefaultScannerRoot(homeDirectory: homeDirectory, fileManager: fileManager))
-        )
         return candidates
     }
 

@@ -48,7 +48,7 @@ cd seta
 ./start.sh
 ```
 
-Keep it at `~/Music/tracks/tools/seta` or choose the path in SetaMac settings after the first scan.
+Keep the scanner repo anywhere you like and point SetaMac at it only if you configure that path explicitly after the first scan.
 
 ## Screenshots
 
