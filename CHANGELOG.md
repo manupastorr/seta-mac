@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.7
+
+- Choose scanner worker count automatically from available CPU and memory instead of forcing one worker on every Mac.
+- Keep low-memory or low-core Macs on one worker for scanner stability.
+- Cap automatic workers conservatively and support `SETA_SCANNER_WORKERS` for troubleshooting overrides.
+
 ## 0.3.6
 
 - Fix scanner refresh so existing installs receive updated bundled scanner files.
