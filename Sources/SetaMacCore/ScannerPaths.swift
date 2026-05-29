@@ -112,7 +112,8 @@ public enum ScannerPaths {
         }
 
         if let last = settings.lastLibraryPath?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !last.isEmpty {
+           !last.isEmpty,
+           fileManager.fileExists(atPath: last) {
             appendCandidate(URL(fileURLWithPath: last))
         }
 
@@ -123,7 +124,10 @@ public enum ScannerPaths {
             homeDirectory: homeDirectory,
             fileManager: fileManager
         ) {
-            appendCandidate(libraryJSON(at: root))
+            let libraryURL = libraryJSON(at: root)
+            if fileManager.fileExists(atPath: libraryURL.path) {
+                appendCandidate(libraryURL)
+            }
         }
 
         return candidates

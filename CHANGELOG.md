@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2
+
+- Fix scary missing `library.json` error on first install; guide users to run **Rescan library** after adding folders.
+- Only auto-load a library file when it actually exists.
+
 ## 0.3.1
 
 - Stop auto-discovering the scanner at `~/Music/tracks/tools/seta`; use Application Support, bundled setup, dev sibling, or an explicitly saved scanner path.

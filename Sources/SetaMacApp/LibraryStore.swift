@@ -395,6 +395,13 @@ extension LibraryStore {
         if library == nil {
             autoLoadLibraryIfPossible()
         }
+        if library == nil {
+            if needsFolderSetup {
+                statusMessage = "Add music folders, then click Rescan library."
+            } else {
+                statusMessage = "Click Rescan library to analyze your folders."
+            }
+        }
         if needsFolderSetup {
             showingLibraryFolders = true
         }
@@ -427,6 +434,20 @@ extension LibraryStore {
     }
 
     func load(url: URL, remember: Bool = true) {
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            if settings.lastLibraryPath == url.path {
+                settings.lastLibraryPath = nil
+                AppSettings.save(settings)
+            }
+            errorMessage = nil
+            if url.lastPathComponent == "library.json" {
+                statusMessage = "No library yet. Add folders, then click Rescan library."
+            } else {
+                statusMessage = "Library file not found."
+            }
+            return
+        }
+
         do {
             let data = try Data(contentsOf: url)
             let decoded = try SetaLibrary.decode(from: data)
@@ -581,9 +602,17 @@ extension LibraryStore {
             isRescanning = false
             if result.exitCode == 0 {
                 let libraryURL = scannerRoot.appendingPathComponent("library.json")
-                load(url: libraryURL)
-                statusMessage = "Library rescanned."
+                if FileManager.default.fileExists(atPath: libraryURL.path) {
+                    load(url: libraryURL)
+                    if errorMessage == nil {
+                        statusMessage = "Library rescanned."
+                    }
+                } else {
+                    errorMessage = nil
+                    statusMessage = "Scan finished, but no library file was created. Try Rescan again."
+                }
             } else {
+                errorMessage = nil
                 statusMessage = "Scan failed: \(result.output.trimmingCharacters(in: .whitespacesAndNewlines))"
             }
         }

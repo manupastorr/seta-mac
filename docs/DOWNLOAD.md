@@ -26,7 +26,7 @@ Local-first macOS app for building DJ set drafts from a map of your library. Sta
    If macOS says **“damaged”**, see [If macOS blocks the app](#if-macos-blocks-the-app).
 4. In SetaMac, click **Start setup** when asked. Keep the app open until setup finishes (a few minutes; internet required once).
 5. Click **Continue**, then add your music folders in **Library → Library Folders…**.
-6. Click **Rescan library** after adding or changing folders.
+6. Click **Rescan library**. This creates the library file and fills the map.
 
 Removing a folder or track in SetaMac does **not** delete your audio files.
 

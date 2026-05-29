@@ -719,6 +719,7 @@ func scannerPathsChecks() throws {
         .appendingPathComponent("Library/Application Support/SetaMac/scanner", isDirectory: true)
     try fileManager.createDirectory(at: appSupport, withIntermediateDirectories: true)
     fileManager.createFile(atPath: appSupport.appendingPathComponent("scan_library.py").path, contents: Data())
+    fileManager.createFile(atPath: appSupport.appendingPathComponent("library.json").path, contents: Data("{}".utf8))
 
     let configuredRoot = tempRoot.appendingPathComponent("configured-scanner", isDirectory: true)
     try fileManager.createDirectory(at: configuredRoot, withIntermediateDirectories: true)
