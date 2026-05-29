@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.8
+
+- Prevent duplicate rescans and stop scans from running when no configured folder can be accessed.
+- Exclude scanner cache and test artifacts from release bundles and in-app scanner refreshes.
+- Make saved draft normalization more robust and avoid timestamp-based draft ID collisions.
+- Avoid a possible hang when launching the Rekordbox helper fails.
+
 ## 0.3.7
 
 - Choose scanner worker count automatically from available CPU and memory instead of forcing one worker on every Mac.
