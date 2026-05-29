@@ -324,14 +324,89 @@ func librarySourcesChecks() {
         quick: true,
         tracksRoots: ["/tracks/a", "/tracks/b"],
         curateRoots: ["/incoming"],
-        excludedPaths: ["/tracks/a/hide.wav"]
+        excludedPaths: ["/tracks/a/hide.wav"],
+        workerCount: 2
     )
     check(args.contains("--skip-edges"), "scanner args quick")
     check(args.contains("--explicit-roots"), "scanner args explicit roots")
-    check(args.contains("--workers") && args.contains("1"), "scanner args use one worker")
+    if let workerFlagIndex = args.firstIndex(of: "--workers") {
+        check(args.indices.contains(workerFlagIndex + 1), "scanner args worker count exists")
+        check(args[workerFlagIndex + 1] == "2", "scanner args include selected worker count")
+    } else {
+        check(false, "scanner args include workers flag")
+    }
     check(args.filter { $0 == "--tracks-root" }.count == 2, "scanner args tracks roots")
     check(args.contains("--curate-root"), "scanner args curate root")
     check(args.contains("--exclude-path"), "scanner args exclude path")
+
+    let gibibyte: UInt64 = 1_073_741_824
+    check(
+        LibraryScannerWorkerPolicy.automaticWorkerCount(
+            activeProcessorCount: 2,
+            physicalMemoryBytes: 64 * gibibyte,
+            environment: [:]
+        ) == 1,
+        "worker policy keeps low-core machines serial"
+    )
+    check(
+        LibraryScannerWorkerPolicy.automaticWorkerCount(
+            activeProcessorCount: 8,
+            physicalMemoryBytes: 8 * gibibyte,
+            environment: [:]
+        ) == 1,
+        "worker policy limits low-memory machines"
+    )
+    check(
+        LibraryScannerWorkerPolicy.automaticWorkerCount(
+            activeProcessorCount: 8,
+            physicalMemoryBytes: 16 * gibibyte,
+            environment: [:]
+        ) == 2,
+        "worker policy uses two workers on mid-range machines"
+    )
+    check(
+        LibraryScannerWorkerPolicy.automaticWorkerCount(
+            activeProcessorCount: 12,
+            physicalMemoryBytes: 32 * gibibyte,
+            environment: [:]
+        ) == LibraryScannerWorkerPolicy.maximumAutomaticWorkerCount,
+        "worker policy caps automatic workers"
+    )
+    check(
+        LibraryScannerWorkerPolicy.automaticWorkerCount(
+            activeProcessorCount: 8,
+            physicalMemoryBytes: 8 * gibibyte,
+            environment: [LibraryScannerWorkerPolicy.environmentOverrideKey: "3"]
+        ) == 3,
+        "worker policy accepts environment override"
+    )
+    check(
+        LibraryScannerWorkerPolicy.automaticWorkerCount(
+            activeProcessorCount: 8,
+            physicalMemoryBytes: 8 * gibibyte,
+            environment: [LibraryScannerWorkerPolicy.environmentOverrideKey: "99"]
+        ) == LibraryScannerWorkerPolicy.maximumOverrideWorkerCount,
+        "worker policy clamps oversized override"
+    )
+    check(
+        LibraryScannerWorkerPolicy.automaticWorkerCount(
+            activeProcessorCount: 8,
+            physicalMemoryBytes: 16 * gibibyte,
+            environment: [LibraryScannerWorkerPolicy.environmentOverrideKey: "auto"]
+        ) == 2,
+        "worker policy ignores auto override value"
+    )
+    check(LibraryScannerWorkerPolicy.commandLineWorkerCount(0) == 1, "worker policy clamps low explicit count")
+    check(
+        LibraryScannerArguments.build(
+            quick: false,
+            tracksRoots: [],
+            curateRoots: [],
+            excludedPaths: [],
+            workerCount: 99
+        ).contains("\(LibraryScannerWorkerPolicy.maximumOverrideWorkerCount)"),
+        "scanner args clamp explicit worker count"
+    )
 
     let defaults = UserDefaults(suiteName: "seta-mac-folder-settings-check")!
     defaults.removePersistentDomain(forName: "seta-mac-folder-settings-check")

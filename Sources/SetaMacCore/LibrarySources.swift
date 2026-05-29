@@ -112,14 +112,79 @@ public enum ExcludedTracksStorage {
     }
 }
 
+public enum LibraryScannerWorkerPolicy {
+    public static let minimumWorkerCount = 1
+    public static let maximumAutomaticWorkerCount = 4
+    public static let maximumOverrideWorkerCount = 8
+    public static let environmentOverrideKey = "SETA_SCANNER_WORKERS"
+
+    private static let gibibyte: UInt64 = 1_073_741_824
+
+    public static func automaticWorkerCount(
+        activeProcessorCount: Int = ProcessInfo.processInfo.activeProcessorCount,
+        physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> Int {
+        if let override = environmentOverrideWorkerCount(environment: environment) {
+            return override
+        }
+        let cpuWorkers = automaticCPUWorkerCount(activeProcessorCount: activeProcessorCount)
+        let memoryWorkers = automaticMemoryWorkerCount(physicalMemoryBytes: physicalMemoryBytes)
+        return clamp(
+            min(cpuWorkers, memoryWorkers),
+            minimum: minimumWorkerCount,
+            maximum: maximumAutomaticWorkerCount
+        )
+    }
+
+    public static func commandLineWorkerCount(_ workerCount: Int) -> Int {
+        clamp(workerCount, minimum: minimumWorkerCount, maximum: maximumOverrideWorkerCount)
+    }
+
+    private static func environmentOverrideWorkerCount(environment: [String: String]) -> Int? {
+        guard let raw = environment[environmentOverrideKey]?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty,
+              raw.lowercased() != "auto",
+              let value = Int(raw) else {
+            return nil
+        }
+        return commandLineWorkerCount(value)
+    }
+
+    private static func automaticCPUWorkerCount(activeProcessorCount: Int) -> Int {
+        guard activeProcessorCount > 2 else { return 1 }
+        return max(1, activeProcessorCount / 2)
+    }
+
+    private static func automaticMemoryWorkerCount(physicalMemoryBytes: UInt64) -> Int {
+        switch physicalMemoryBytes {
+        case 0 ..< 12 * gibibyte:
+            return 1
+        case 12 * gibibyte ..< 24 * gibibyte:
+            return 2
+        case 24 * gibibyte ..< 32 * gibibyte:
+            return 3
+        default:
+            return 4
+        }
+    }
+
+    private static func clamp(_ value: Int, minimum: Int, maximum: Int) -> Int {
+        min(maximum, max(minimum, value))
+    }
+}
+
 public enum LibraryScannerArguments {
     public static func build(
         quick: Bool,
         tracksRoots: [String],
         curateRoots: [String],
-        excludedPaths: [String]
+        excludedPaths: [String],
+        workerCount: Int? = nil
     ) -> [String] {
-        var args: [String] = ["--explicit-roots", "--workers", "1"]
+        let workers = workerCount.map(LibraryScannerWorkerPolicy.commandLineWorkerCount)
+            ?? LibraryScannerWorkerPolicy.automaticWorkerCount()
+        var args: [String] = ["--explicit-roots", "--workers", "\(workers)"]
         if quick {
             args.append("--skip-edges")
         }
