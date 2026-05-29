@@ -328,6 +328,7 @@ func librarySourcesChecks() {
     )
     check(args.contains("--skip-edges"), "scanner args quick")
     check(args.contains("--explicit-roots"), "scanner args explicit roots")
+    check(args.contains("--workers") && args.contains("1"), "scanner args use one worker")
     check(args.filter { $0 == "--tracks-root" }.count == 2, "scanner args tracks roots")
     check(args.contains("--curate-root"), "scanner args curate root")
     check(args.contains("--exclude-path"), "scanner args exclude path")
@@ -776,6 +777,29 @@ func scannerPathsChecks() throws {
     check(ScannerPaths.isScannerReady(at: readyRoot, fileManager: fileManager), "scanner ready requires venv python")
     check(!ScannerPaths.isScannerReady(at: appSupport, fileManager: fileManager), "scanner without venv is not ready")
 
+    let bundledRoot = tempRoot.appendingPathComponent("bundled-scanner", isDirectory: true)
+    try fileManager.createDirectory(at: bundledRoot, withIntermediateDirectories: true)
+    fileManager.createFile(atPath: bundledRoot.appendingPathComponent("scan_library.py").path, contents: Data("new".utf8))
+    fileManager.createFile(atPath: bundledRoot.appendingPathComponent("requirements.txt").path, contents: Data("deps".utf8))
+    fileManager.createFile(atPath: readyRoot.appendingPathComponent("requirements.txt").path, contents: Data("deps".utf8))
+    check(
+        ScannerPaths.bundledScannerNeedsRefresh(
+            installedRoot: readyRoot,
+            bundledRoot: bundledRoot,
+            fileManager: fileManager
+        ),
+        "scanner refresh detects stale installed script"
+    )
+    try Data("new".utf8).write(to: readyRoot.appendingPathComponent("scan_library.py"))
+    check(
+        !ScannerPaths.bundledScannerNeedsRefresh(
+            installedRoot: readyRoot,
+            bundledRoot: bundledRoot,
+            fileManager: fileManager
+        ),
+        "scanner refresh accepts matching manifest files"
+    )
+
     let candidates = ScannerPaths.defaultLibraryCandidates(
         settings: fallbackSettings,
         homeDirectory: homeOverride,
@@ -838,7 +862,7 @@ func scannerInstallerChecks() throws {
     let ignored = bundled.appendingPathComponent(".venv/bin", isDirectory: true)
     try fileManager.createDirectory(at: ignored, withIntermediateDirectories: true)
     fileManager.createFile(atPath: ignored.appendingPathComponent("python").path, contents: Data())
-    fileManager.createFile(atPath: bundled.appendingPathComponent("scan_library.py").path, contents: Data("print('ok')".utf8))
+    fileManager.createFile(atPath: bundled.appendingPathComponent("scan_library.py").path, contents: Data("print('new')".utf8))
     fileManager.createFile(atPath: bundled.appendingPathComponent("requirements.txt").path, contents: Data())
     fileManager.createFile(atPath: bundled.appendingPathComponent("library.json").path, contents: Data("{}".utf8))
 
@@ -866,16 +890,24 @@ func scannerInstallerChecks() throws {
 
     let readyRoot = tempRoot.appendingPathComponent("ready", isDirectory: true)
     try fileManager.createDirectory(at: readyRoot, withIntermediateDirectories: true)
-    fileManager.createFile(atPath: readyRoot.appendingPathComponent("scan_library.py").path, contents: Data())
+    fileManager.createFile(atPath: readyRoot.appendingPathComponent("scan_library.py").path, contents: Data("print('old')".utf8))
     let readyPython = readyRoot.appendingPathComponent(".venv/bin", isDirectory: true)
     try fileManager.createDirectory(at: readyPython, withIntermediateDirectories: true)
     fileManager.createFile(atPath: readyPython.appendingPathComponent("python").path, contents: Data())
     try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: readyPython.appendingPathComponent("python").path)
+    fileManager.createFile(
+        atPath: readyPython.appendingPathComponent("pip").path,
+        contents: Data("#!/bin/sh\nexit 0\n".utf8)
+    )
+    try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: readyPython.appendingPathComponent("pip").path)
     let alreadyReady = ScannerInstaller.install(
         bundledRoot: bundled,
         destinationRoot: readyRoot
     )
-    check(alreadyReady.success, "installer skips work when scanner is already ready")
+    check(alreadyReady.success, "installer updates files when scanner is already ready")
+    check(alreadyReady.message == "Scanner updated.", "installer reports scanner update")
+    let refreshedScript = try String(contentsOf: readyRoot.appendingPathComponent("scan_library.py"), encoding: .utf8)
+    check(refreshedScript.contains("print('new')"), "installer refreshes stale scanner script")
 
     var phases: [ScannerInstallerPhase] = []
     if let python3 = ScannerInstaller.systemPython3(fileManager: fileManager) {
@@ -921,6 +953,12 @@ func bundledScannerReleaseChecks() {
         fileManager.fileExists(atPath: scannerRoot.appendingPathComponent("requirements.txt").path),
         "release bundle includes requirements.txt"
     )
+    if let requirementsData = try? Data(contentsOf: scannerRoot.appendingPathComponent("requirements.txt")),
+       let requirements = String(data: requirementsData, encoding: .utf8) {
+        check(requirements.contains("librosa>=0.10.1,<0.11"), "release bundle pins librosa below 0.11")
+    } else {
+        check(false, "requirements.txt is readable in release bundle")
+    }
     check(
         !fileManager.fileExists(atPath: scannerRoot.appendingPathComponent(".venv").path),
         "release bundle excludes .venv"
@@ -932,6 +970,7 @@ func bundledScannerReleaseChecks() {
     if let scriptData = try? Data(contentsOf: scannerRoot.appendingPathComponent("scan_library.py")),
        let script = String(data: scriptData, encoding: .utf8) {
         check(script.contains("if __name__ == \"__main__\":"), "scan_library.py exposes CLI entrypoint")
+        check(script.contains("\"--explicit-roots\""), "scan_library.py accepts explicit roots flag")
     } else {
         check(false, "scan_library.py is readable in release bundle")
     }

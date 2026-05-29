@@ -63,16 +63,6 @@ public enum ScannerInstaller {
             )
         }
 
-        if ScannerPaths.isScannerReady(at: destination, fileManager: fileManager) {
-            phaseHandler?(.finished)
-            return ScannerInstallResult(
-                success: true,
-                scannerRoot: destination,
-                message: "Scanner is already installed.",
-                output: ""
-            )
-        }
-
         phaseHandler?(.copyingFiles)
         do {
             try syncScannerFiles(from: source, to: destination, fileManager: fileManager)
@@ -84,6 +74,9 @@ public enum ScannerInstaller {
             )
         }
 
+        let wasReady = fileManager.isExecutableFile(
+            atPath: destination.appendingPathComponent(ScannerPaths.pythonRelativePath).path
+        )
         let requirements = destination.appendingPathComponent("requirements.txt")
         guard fileManager.isReadableFile(atPath: requirements.path) else {
             return failure(
@@ -93,17 +86,16 @@ public enum ScannerInstaller {
             )
         }
 
-        let python3 = resolvePython3(executable: python3Executable, fileManager: fileManager)
-        guard let python3 else {
-            return failure(
-                message: "Python 3 was not found on this Mac.",
-                output: "Install Xcode Command Line Tools or Python 3, then try again.",
-                phaseHandler: phaseHandler
-            )
-        }
-
         let venvPython = destination.appendingPathComponent(ScannerPaths.pythonRelativePath)
         if !fileManager.isExecutableFile(atPath: venvPython.path) {
+            let python3 = resolvePython3(executable: python3Executable, fileManager: fileManager)
+            guard let python3 else {
+                return failure(
+                    message: "Python 3 was not found on this Mac.",
+                    output: "Install Xcode Command Line Tools or Python 3, then try again.",
+                    phaseHandler: phaseHandler
+                )
+            }
             phaseHandler?(.creatingEnvironment)
             let venvResult = runProcess(
                 executable: python3,
@@ -154,7 +146,7 @@ public enum ScannerInstaller {
         return ScannerInstallResult(
             success: true,
             scannerRoot: destination,
-            message: "Scanner installed.",
+            message: wasReady ? "Scanner updated." : "Scanner installed.",
             output: trimmedOutput(pipResult.output)
         )
     }

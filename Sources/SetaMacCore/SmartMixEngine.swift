@@ -578,7 +578,9 @@ public enum SmartMixEngine {
         let sourceZones = matchingMomentIDs(source)
         let targetZones = matchingMomentIDs(target)
         let crossesZone = !sourceZones.isEmpty && !targetZones.isEmpty && sourceZones.isDisjoint(with: targetZones)
-        let bpmShift = abs((target.bpm ?? source.bpm ?? 0) - (source.bpm ?? target.bpm ?? 0)) >= 4
+        let targetBPM = target.bpm ?? source.bpm ?? 0
+        let sourceBPM = source.bpm ?? target.bpm ?? 0
+        let bpmShift = abs(targetBPM - sourceBPM) >= 4
         let harmonicMove = source.key != nil && target.key != nil && source.key != target.key
         let sourceBoundary = source.source != target.source && (bpmShift || harmonicMove)
         return crossesZone || (bpmShift && harmonicMove) || sourceBoundary

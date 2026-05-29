@@ -6,6 +6,10 @@ public enum ScannerPaths {
     public static let bundledResourcesDirectoryName = "Scanner"
     public static let scanScriptName = "scan_library.py"
     public static let pythonRelativePath = ".venv/bin/python"
+    public static let refreshManifestFileNames = [
+        scanScriptName,
+        "requirements.txt",
+    ]
 
     public static func applicationSupportScannerRoot(
         homeDirectory: URL? = nil,
@@ -53,6 +57,25 @@ public enum ScannerPaths {
     ) -> Bool {
         guard isScannerInstalled(at: root, fileManager: fileManager) else { return false }
         return fileManager.isExecutableFile(atPath: root.appendingPathComponent(pythonRelativePath).path)
+    }
+
+    public static func bundledScannerNeedsRefresh(
+        installedRoot: URL,
+        bundledRoot: URL,
+        fileManager: FileManager = .default
+    ) -> Bool {
+        for name in refreshManifestFileNames {
+            let installed = installedRoot.appendingPathComponent(name)
+            let bundled = bundledRoot.appendingPathComponent(name)
+            guard let installedData = try? Data(contentsOf: installed),
+                  let bundledData = try? Data(contentsOf: bundled) else {
+                return true
+            }
+            if installedData != bundledData {
+                return true
+            }
+        }
+        return false
     }
 
     public static func configuredScannerRoot(
@@ -169,6 +192,13 @@ public enum ScannerPaths {
         homeDirectory: URL? = nil,
         fileManager: FileManager = .default
     ) -> Bool {
+        let appSupport = applicationSupportScannerRoot(homeDirectory: homeDirectory, fileManager: fileManager)
+        if let bundled = bundledScannerRoot(bundle: bundle, fileManager: fileManager),
+           isScannerReady(at: appSupport, fileManager: fileManager),
+           bundledScannerNeedsRefresh(installedRoot: appSupport, bundledRoot: bundled, fileManager: fileManager) {
+            return true
+        }
+
         if hasRunnableScanner(
             settings: settings,
             bundle: bundle,

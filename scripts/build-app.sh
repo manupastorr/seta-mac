@@ -41,8 +41,30 @@ rsync -a \
   --exclude '.DS_Store' \
   "$SETA_SRC/" "$SCANNER_DEST/"
 
+python3 - "$SCANNER_DEST/requirements.txt" <<'PY'
+from pathlib import Path
+import sys
+
+requirements = Path(sys.argv[1])
+text = requirements.read_text()
+text = text.replace("librosa>=0.10.1,<0.12", "librosa>=0.10.1,<0.11")
+requirements.write_text(text)
+PY
+
 if [[ ! -f "$SCANNER_DEST/scan_library.py" || ! -f "$SCANNER_DEST/requirements.txt" ]]; then
   echo "Bundled scanner is incomplete at $SCANNER_DEST"
+  exit 1
+fi
+if ! grep -q 'if __name__ == "__main__":' "$SCANNER_DEST/scan_library.py"; then
+  echo "Bundled scanner is missing its CLI entrypoint"
+  exit 1
+fi
+if ! grep -q -- '--explicit-roots' "$SCANNER_DEST/scan_library.py"; then
+  echo "Bundled scanner is missing the --explicit-roots flag required by SetaMac"
+  exit 1
+fi
+if ! grep -q 'librosa>=0.10.1,<0.11' "$SCANNER_DEST/requirements.txt"; then
+  echo "Bundled scanner must pin librosa below 0.11 for macOS scanner stability"
   exit 1
 fi
 if [[ -d "$SCANNER_DEST/.venv" ]]; then
