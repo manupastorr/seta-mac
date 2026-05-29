@@ -937,6 +937,28 @@ func bundledScannerReleaseChecks() {
     }
 }
 
+func scanProgressChecks() {
+    var progress = ScanProgress()
+    ScanProgressParser.ingest(line: "Found 1010 audio files", into: &progress)
+    check(progress.total == 1010, "scan progress parses total")
+    check(progress.phase == .scanning, "scan progress enters scanning phase")
+
+    ScanProgressParser.ingest(line: "  cached 250/1010", into: &progress)
+    check(progress.completed == 250, "scan progress parses cached counts")
+
+    ScanProgressParser.ingest(line: "  analyzed 500/1010", into: &progress)
+    check(progress.completed == 500, "scan progress parses analyzed counts")
+
+    let startedAt = Date(timeIntervalSince1970: 0)
+    let midway = Date(timeIntervalSince1970: 100)
+    let message = ScanProgressParser.statusMessage(for: progress, startedAt: startedAt, now: midway)
+    check(message.contains("500/1010"), "scan progress status includes counts")
+    check(message.contains("left"), "scan progress status includes eta")
+
+    check(ScanProgressParser.formatETA(seconds: 45) == "~45 sec left", "scan progress eta seconds")
+    check(ScanProgressParser.formatETA(seconds: 120) == "~2 min left", "scan progress eta minutes")
+}
+
 do {
     try decodesCurrentLibraryContract()
     try validationFindsContractIssues()
@@ -954,6 +976,7 @@ do {
     try smartJourneyChecks()
     try scannerPathsChecks()
     try scannerInstallerChecks()
+    scanProgressChecks()
     bundledScannerReleaseChecks()
     try smokeRealLibrary()
     print("SetaMacChecks: OK")

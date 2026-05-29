@@ -137,9 +137,10 @@ struct LibraryFoldersSheet: View {
             } else if store.isRescanning {
                 ProgressView()
                     .controlSize(.small)
-                Text("Scanning…")
+                Text(store.statusMessage ?? "Scanning…")
                     .font(.system(size: 11))
                     .foregroundStyle(SetaTheme.muted)
+                    .lineLimit(1)
             }
 
             Spacer(minLength: 0)
@@ -147,7 +148,6 @@ struct LibraryFoldersSheet: View {
             SetaSecondaryButton(title: "Close") { dismiss() }
 
             Button("Rescan library") {
-                dismiss()
                 store.rescanLibrary()
             }
             .buttonStyle(.borderedProminent)

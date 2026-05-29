@@ -589,11 +589,17 @@ extension LibraryStore {
             return
         }
         isRescanning = true
+        statusMessage = "Preparing scan…"
         let tracksAccess = settings.startAccessingTracksRoots()
         let curateAccess = settings.startAccessingCurateRoots()
         let tracksRoots = tracksAccess.map(\.path)
         let curateRoots = curateAccess.map(\.path)
         let excluded = Array(excludedTrackPaths)
+        let progressTracker = ScanProgressTracker { [weak self] message in
+            Task { @MainActor in
+                self?.statusMessage = message
+            }
+        }
         Task {
             defer {
                 tracksAccess.forEach { $0.stopAccessing() }
@@ -605,7 +611,8 @@ extension LibraryStore {
                     tracksRoots: tracksRoots,
                     curateRoots: curateRoots,
                     excludedPaths: excluded,
-                    quick: true
+                    quick: true,
+                    onLine: { progressTracker.handleLine($0) }
                 )
             }.value
             isRescanning = false

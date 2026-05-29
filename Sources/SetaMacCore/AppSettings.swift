@@ -85,7 +85,8 @@ public enum LibraryScanner {
         tracksRoots: [String] = [],
         curateRoots: [String] = [],
         excludedPaths: [String] = [],
-        quick: Bool = true
+        quick: Bool = true,
+        onLine: (@Sendable (String) -> Void)? = nil
     ) -> ScanResult {
         let python = scannerRoot.appendingPathComponent(".venv/bin/python")
         let script = scannerRoot.appendingPathComponent("scan_library.py")
@@ -96,7 +97,7 @@ public enum LibraryScanner {
         let process = Process()
         let pipe = Pipe()
         process.executableURL = python
-        process.arguments = [script.path] + LibraryScannerArguments.build(
+        process.arguments = ["-u", script.path] + LibraryScannerArguments.build(
             quick: quick,
             tracksRoots: tracksRoots,
             curateRoots: curateRoots,
@@ -109,11 +110,10 @@ public enum LibraryScanner {
 
         do {
             try process.run()
-            collector.startReading(pipe.fileHandleForReading)
+            collector.startReading(pipe.fileHandleForReading, onLine: onLine)
             process.waitUntilExit()
             collector.waitForOutput()
-            let data = collector.output
-            let output = String(data: data, encoding: .utf8) ?? ""
+            let output = String(data: collector.output, encoding: .utf8) ?? ""
             return ScanResult(exitCode: process.terminationStatus, output: output)
         } catch {
             return ScanResult(exitCode: 1, output: error.localizedDescription)
@@ -123,13 +123,46 @@ public enum LibraryScanner {
 
 private final class ScannerOutputCollector: @unchecked Sendable {
     private var data = Data()
+    private var lineBuffer = ""
     private let group = DispatchGroup()
+    private let lock = NSLock()
 
-    func startReading(_ handle: FileHandle) {
+    func startReading(_ handle: FileHandle, onLine: (@Sendable (String) -> Void)?) {
         group.enter()
-        DispatchQueue.global(qos: .userInitiated).async {
-            self.data = handle.readDataToEndOfFile()
-            self.group.leave()
+        handle.readabilityHandler = { [weak self] source in
+            guard let self else { return }
+            let chunk = source.availableData
+            if chunk.isEmpty {
+                source.readabilityHandler = nil
+                self.finishPendingLines(onLine: onLine)
+                self.group.leave()
+                return
+            }
+
+            self.lock.lock()
+            self.data.append(chunk)
+            if let onLine {
+                self.lineBuffer += String(data: chunk, encoding: .utf8) ?? ""
+                while let range = self.lineBuffer.range(of: "\n") {
+                    let line = String(self.lineBuffer[..<range.lowerBound])
+                    self.lineBuffer.removeSubrange(..<range.upperBound)
+                    self.lock.unlock()
+                    onLine(line)
+                    self.lock.lock()
+                }
+            }
+            self.lock.unlock()
+        }
+    }
+
+    private func finishPendingLines(onLine: (@Sendable (String) -> Void)?) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let onLine else { return }
+        let trailing = lineBuffer.trimmingCharacters(in: .newlines)
+        lineBuffer = ""
+        if !trailing.isEmpty {
+            onLine(trailing)
         }
     }
 
@@ -137,5 +170,9 @@ private final class ScannerOutputCollector: @unchecked Sendable {
         group.wait()
     }
 
-    var output: Data { data }
+    var output: Data {
+        lock.lock()
+        defer { lock.unlock() }
+        return data
+    }
 }

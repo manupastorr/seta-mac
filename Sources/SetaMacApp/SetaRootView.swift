@@ -213,7 +213,7 @@ struct StatusBanner: View {
     }
 
     private func scheduleDismiss(for message: String) {
-        guard store.errorMessage == nil else { return }
+        guard store.errorMessage == nil, !store.isRescanning else { return }
         dismissTask?.cancel()
         dismissTask = Task { @MainActor in
             try? await Task.sleep(for: .seconds(2))
