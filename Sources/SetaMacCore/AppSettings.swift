@@ -56,17 +56,16 @@ public struct AppSettings: Codable, Equatable {
         defaults.set(data, forKey: storageKey)
     }
 
-    public static func defaultLibraryCandidates(scannerRoot: String?) -> [URL] {
-        var candidates: [URL] = []
-        if let last = load().lastLibraryPath {
-            candidates.append(URL(fileURLWithPath: last))
-        }
-        if let scannerRoot {
-            candidates.append(URL(fileURLWithPath: scannerRoot).appendingPathComponent("library.json"))
-        }
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        candidates.append(URL(fileURLWithPath: "\(home)/Music/tracks/tools/seta/library.json"))
-        return candidates
+    public static func defaultLibraryCandidates(
+        settings: AppSettings? = nil,
+        bundle: Bundle = .main,
+        devSiblingSourceFilePath: String? = nil
+    ) -> [URL] {
+        ScannerPaths.defaultLibraryCandidates(
+            settings: settings ?? load(),
+            bundle: bundle,
+            devSiblingSourceFilePath: devSiblingSourceFilePath
+        )
     }
 }
 

@@ -706,6 +706,66 @@ func smartJourneyChecks() throws {
     check(SmartMixEngine.draftWeakLinks(draft: draft, tracks: tracks).isEmpty, "draft analyzer leaves strong link alone")
 }
 
+func scannerPathsChecks() throws {
+    let fileManager = FileManager.default
+    let tempRoot = fileManager.temporaryDirectory.appendingPathComponent("seta-mac-scanner-paths-\(UUID().uuidString)", isDirectory: true)
+    try fileManager.createDirectory(at: tempRoot, withIntermediateDirectories: true)
+
+    defer {
+        try? fileManager.removeItem(at: tempRoot)
+    }
+
+    let appSupport = tempRoot
+        .appendingPathComponent("Library/Application Support/SetaMac/scanner", isDirectory: true)
+    try fileManager.createDirectory(at: appSupport, withIntermediateDirectories: true)
+    fileManager.createFile(atPath: appSupport.appendingPathComponent("scan_library.py").path, contents: Data())
+
+    let legacy = tempRoot.appendingPathComponent("Music/tracks/tools/seta", isDirectory: true)
+    try fileManager.createDirectory(at: legacy, withIntermediateDirectories: true)
+    fileManager.createFile(atPath: legacy.appendingPathComponent("scan_library.py").path, contents: Data())
+
+    let homeOverride = tempRoot
+    let appSupportRoot = ScannerPaths.applicationSupportScannerRoot(
+        homeDirectory: homeOverride,
+        fileManager: fileManager
+    )
+    check(appSupportRoot.path.hasSuffix("Library/Application Support/SetaMac/scanner"), "application support scanner path")
+
+    let settings = AppSettings(setaScannerRoot: legacy.path)
+    let preferred = ScannerPaths.preferredScannerRoot(
+        settings: settings,
+        homeDirectory: homeOverride,
+        fileManager: fileManager
+    )
+    check(preferred?.path == legacy.path, "configured scanner root wins")
+
+    let fallbackSettings = AppSettings()
+    let fallbackPreferred = ScannerPaths.preferredScannerRoot(
+        settings: fallbackSettings,
+        homeDirectory: homeOverride,
+        fileManager: fileManager
+    )
+    check(fallbackPreferred?.path == appSupport.path, "application support scanner root is preferred fallback")
+
+    let readyRoot = tempRoot.appendingPathComponent("ready-scanner", isDirectory: true)
+    try fileManager.createDirectory(at: readyRoot, withIntermediateDirectories: true)
+    fileManager.createFile(atPath: readyRoot.appendingPathComponent("scan_library.py").path, contents: Data())
+    let python = readyRoot.appendingPathComponent(".venv/bin", isDirectory: true)
+    try fileManager.createDirectory(at: python, withIntermediateDirectories: true)
+    fileManager.createFile(atPath: python.appendingPathComponent("python").path, contents: Data())
+    try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: python.appendingPathComponent("python").path)
+    check(ScannerPaths.isScannerReady(at: readyRoot, fileManager: fileManager), "scanner ready requires venv python")
+    check(!ScannerPaths.isScannerReady(at: appSupport, fileManager: fileManager), "scanner without venv is not ready")
+
+    let candidates = ScannerPaths.defaultLibraryCandidates(
+        settings: fallbackSettings,
+        homeDirectory: homeOverride,
+        fileManager: fileManager
+    )
+    check(candidates.contains(ScannerPaths.libraryJSON(at: appSupport)), "library candidates include app support scanner")
+    check(candidates.contains(ScannerPaths.libraryJSON(at: legacy)), "library candidates include legacy scanner")
+}
+
 do {
     try decodesCurrentLibraryContract()
     try validationFindsContractIssues()
@@ -721,6 +781,7 @@ do {
     try rekordboxPlaylistImport()
     try trackOverrideHelpers()
     try smartJourneyChecks()
+    try scannerPathsChecks()
     try smokeRealLibrary()
     print("SetaMacChecks: OK")
 } catch {

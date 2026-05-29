@@ -299,27 +299,17 @@ extension LibraryStore {
     }
 
     var scannerRootURL: URL? {
-        if let configured = settings.setaScannerRoot {
-            return URL(fileURLWithPath: configured)
-        }
-        let sibling = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("seta")
-        if FileManager.default.fileExists(atPath: sibling.appendingPathComponent("scan_library.py").path) {
-            return sibling
-        }
-        let defaultPath = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Music/tracks/tools/seta")
-        return FileManager.default.fileExists(atPath: defaultPath.appendingPathComponent("scan_library.py").path)
-            ? defaultPath
-            : nil
+        ScannerPaths.preferredScannerRoot(
+            settings: settings,
+            devSiblingSourceFilePath: #filePath
+        )
     }
 
     func autoLoadLibraryIfPossible() {
-        let candidates = AppSettings.defaultLibraryCandidates(scannerRoot: scannerRootURL?.path)
+        let candidates = AppSettings.defaultLibraryCandidates(
+            settings: settings,
+            devSiblingSourceFilePath: #filePath
+        )
         for url in candidates where FileManager.default.fileExists(atPath: url.path) {
             load(url: url, remember: false)
             return
@@ -637,7 +627,7 @@ extension LibraryStore {
         rekordboxImportMessage = nil
         isLoadingRekordboxImport = true
 
-        let root = settings.setaScannerRoot.map { URL(fileURLWithPath: $0) }
+        let root = scannerRootURL
         let tracks = library?.tracks ?? []
 
         Task {
