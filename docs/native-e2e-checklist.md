@@ -1,6 +1,6 @@
 # SetaMac Native E2E Checklist
 
-Date: 2026-05-24
+Date: 2026-05-29
 
 SetaMac should feel like a map-first set-journey tool: start from a seed track, explore plausible candidates and bridges, build a draft, review weak links, then export without turning the workflow into automatic playlist generation.
 
@@ -9,16 +9,23 @@ Run after `./scripts/verify-all.sh` passes.
 ## Setup
 
 ```bash
-cd ../seta
-./start.sh --quick
-
-cd ../seta-mac
+cd seta-mac
 ./scripts/build-app.sh && open dist/SetaMac.app
 ```
 
+On a fresh Mac or after deleting `~/Library/Application Support/SetaMac/scanner`, verify the first-run setup flow instead of using git or Terminal.
+
+## First-run setup
+
+- [ ] Fresh launch opens **Set up library analysis** before library folders.
+- [ ] **Start setup** copies the bundled scanner and finishes without Terminal.
+- [ ] Setup shows progress text while copying, creating the environment, and installing dependencies.
+- [ ] Failed setup shows a readable error and **Try again** works after fixing network/Python issues.
+- [ ] **Continue** opens **Library Folders…** after success.
+
 ## Library folders
 
-- [ ] First launch (no folders configured) opens **Library Folders…**.
+- [ ] First launch after setup opens **Library Folders…** when no folders are configured.
 - [ ] Add multiple Library and Incoming folders; subfolders appear after rescan.
 - [ ] Remove a folder from the list; rescan drops its tracks from the map.
 - [ ] **Remove from Seta…** on a neighbor row hides the track without deleting the file.
@@ -66,7 +73,8 @@ cd ../seta-mac
 
 ## Scanner Bridge
 
-- [ ] Rescan Library runs Python `scan_library.py` and reloads `library.json`.
+- [ ] **Rescan library** runs the bundled scanner and reloads `library.json`.
+- [ ] Scanner lives in Application Support after first-run setup.
 
 ## Optional Release
 
@@ -77,6 +85,8 @@ cd ../seta-mac
 
 ```bash
 swift run SetaMacChecks
+./scripts/build-app.sh
+SETA_APP_BUNDLE="$PWD/dist/SetaMac.app" swift run SetaMacChecks
 ./scripts/verify-all.sh
 ```
 

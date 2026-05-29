@@ -863,6 +863,42 @@ func scannerInstallerChecks() throws {
     }
 }
 
+func bundledScannerReleaseChecks() {
+    guard let bundlePath = ProcessInfo.processInfo.environment["SETA_APP_BUNDLE"] else {
+        print("BundledScannerRelease: skipped (SETA_APP_BUNDLE not set)")
+        return
+    }
+
+    let fileManager = FileManager.default
+    guard fileManager.fileExists(atPath: bundlePath),
+          let bundle = Bundle(path: bundlePath) else {
+        check(false, "release app bundle exists at SETA_APP_BUNDLE")
+        return
+    }
+
+    guard let scannerRoot = ScannerPaths.bundledScannerRoot(bundle: bundle, fileManager: fileManager) else {
+        check(false, "release bundle exposes bundled scanner")
+        return
+    }
+
+    check(
+        fileManager.fileExists(atPath: scannerRoot.appendingPathComponent("scan_library.py").path),
+        "release bundle includes scan_library.py"
+    )
+    check(
+        fileManager.fileExists(atPath: scannerRoot.appendingPathComponent("requirements.txt").path),
+        "release bundle includes requirements.txt"
+    )
+    check(
+        !fileManager.fileExists(atPath: scannerRoot.appendingPathComponent(".venv").path),
+        "release bundle excludes .venv"
+    )
+    check(
+        !fileManager.fileExists(atPath: scannerRoot.appendingPathComponent("library.json").path),
+        "release bundle excludes library.json"
+    )
+}
+
 do {
     try decodesCurrentLibraryContract()
     try validationFindsContractIssues()
@@ -880,6 +916,7 @@ do {
     try smartJourneyChecks()
     try scannerPathsChecks()
     try scannerInstallerChecks()
+    bundledScannerReleaseChecks()
     try smokeRealLibrary()
     print("SetaMacChecks: OK")
 } catch {

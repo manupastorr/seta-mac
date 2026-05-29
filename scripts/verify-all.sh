@@ -14,6 +14,16 @@ swift build -c release --product SetaMac
 echo "== SetaMac app bundle =="
 ./scripts/build-app.sh
 
+echo "== Bundled scanner smoke =="
+APP_BUNDLE="$ROOT/dist/SetaMac.app"
+SCANNER="$APP_BUNDLE/Contents/Resources/Scanner"
+test -d "$APP_BUNDLE"
+test -f "$SCANNER/scan_library.py"
+test -f "$SCANNER/requirements.txt"
+test ! -e "$SCANNER/.venv"
+test ! -f "$SCANNER/library.json"
+echo "Bundled scanner files OK in $APP_BUNDLE"
+
 echo "== Python tests (seta) =="
 cd "$SETA_ROOT"
 .venv/bin/python -m unittest discover -s tests -v
