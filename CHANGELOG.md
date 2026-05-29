@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+- First-run setup: SetaMac installs its bundled scanner locally with no git or Terminal.
+- Release builds bundle the scanner inside `SetaMac.app`; setup runs from the app on first launch.
+- Install docs updated for the new flow: download, open, set up analysis, add folders, rescan.
+
 ## 0.2.0
 
 - Product language: SetaMac is now framed as a local-first, map-first set-journey tool for starting DJ set drafts with candidates, bridge routes, weak-link review, and Rekordbox export.
