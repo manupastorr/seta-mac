@@ -22,6 +22,8 @@ test -f "$SCANNER/scan_library.py"
 test -f "$SCANNER/requirements.txt"
 test ! -e "$SCANNER/.venv"
 test ! -f "$SCANNER/library.json"
+test ! -f "$SCANNER/cache.json"
+test ! -d "$SCANNER/tests"
 echo "Bundled scanner files OK in $APP_BUNDLE"
 
 echo "== Python tests (seta) =="

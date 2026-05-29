@@ -579,6 +579,7 @@ extension LibraryStore {
     // MARK: - Library folders and rescanning
 
     func rescanLibrary() {
+        guard !isRescanning else { return }
         guard let scannerRoot = scannerRootURL else {
             statusMessage = "Seta scanner folder not found."
             return
@@ -588,12 +589,26 @@ extension LibraryStore {
             statusMessage = "Add library folders before scanning."
             return
         }
-        isRescanning = true
-        statusMessage = "Preparing scan…"
         let tracksAccess = settings.startAccessingTracksRoots()
         let curateAccess = settings.startAccessingCurateRoots()
         let tracksRoots = tracksAccess.map(\.path)
         let curateRoots = curateAccess.map(\.path)
+        guard !tracksRoots.isEmpty || !curateRoots.isEmpty else {
+            tracksAccess.forEach { $0.stopAccessing() }
+            curateAccess.forEach { $0.stopAccessing() }
+            showingLibraryFolders = true
+            statusMessage = "SetaMac could not access those folders. Add them again, then rescan."
+            return
+        }
+
+        isRescanning = true
+        let configuredFolderCount = settings.tracksFolders.count + settings.curateFolders.count
+        let accessibleFolderCount = tracksRoots.count + curateRoots.count
+        if accessibleFolderCount < configuredFolderCount {
+            statusMessage = "Scanning accessible folders…"
+        } else {
+            statusMessage = "Preparing scan…"
+        }
         let excluded = Array(excludedTrackPaths)
         let progressTracker = ScanProgressTracker { [weak self] message in
             Task { @MainActor in

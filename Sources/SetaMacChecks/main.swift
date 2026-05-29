@@ -268,6 +268,8 @@ func playbackHelpers() throws {
 }
 
 func draftStoreRoundtrip() {
+    check(DraftStore.newDraftId() != DraftStore.newDraftId(), "draft ids are unique")
+
     var store = DraftStoreState()
     var draft = DraftStore.createDraft(name: "Fusion")
     draft.add(trackId: "x")
@@ -284,6 +286,21 @@ func draftStoreRoundtrip() {
     check(loaded.drafts[draft.id]?.trackIds == ["x", "y"], "draft tracks roundtrip")
     check(loaded.drafts[draft.id]?.finalIds == ["x"], "final ids roundtrip")
     check(loaded.drafts[draft.id]?.notes["x"] == "opener", "notes roundtrip")
+
+    let raw = SetaDraft(
+        id: "",
+        name: "  ",
+        trackIds: ["a", "a", "", "b"],
+        finalIds: ["a", "a", "missing"],
+        notes: ["a": "keep", "missing": "drop"],
+        sortMode: .manual
+    )
+    let normalized = DraftStore.normalizeDraft(raw)
+    check(normalized?.id.isEmpty == false, "draft normalization repairs empty id")
+    check(normalized?.name == "Setlist", "draft normalization repairs empty name")
+    check(normalized?.trackIds == ["a", "b"], "draft normalization dedupes tracks")
+    check(normalized?.finalIds == ["a"], "draft normalization prunes final ids")
+    check(normalized?.notes == ["a": "keep"], "draft normalization prunes stale notes")
 }
 
 // MARK: - Settings and geometry checks
@@ -940,11 +957,19 @@ func scannerInstallerChecks() throws {
     fileManager.createFile(atPath: bundled.appendingPathComponent("scan_library.py").path, contents: Data("print('new')".utf8))
     fileManager.createFile(atPath: bundled.appendingPathComponent("requirements.txt").path, contents: Data())
     fileManager.createFile(atPath: bundled.appendingPathComponent("library.json").path, contents: Data("{}".utf8))
+    fileManager.createFile(atPath: bundled.appendingPathComponent("cache.json").path, contents: Data("{}".utf8))
+    fileManager.createFile(atPath: bundled.appendingPathComponent(".env.example").path, contents: Data())
+    let bundledTests = bundled.appendingPathComponent("tests", isDirectory: true)
+    try fileManager.createDirectory(at: bundledTests, withIntermediateDirectories: true)
+    fileManager.createFile(atPath: bundledTests.appendingPathComponent("test_scan_library.py").path, contents: Data())
 
     try ScannerInstaller.syncScannerFiles(from: bundled, to: destination, fileManager: fileManager)
     check(fileManager.fileExists(atPath: destination.appendingPathComponent("scan_library.py").path), "installer sync copies scanner script")
     check(fileManager.fileExists(atPath: destination.appendingPathComponent("requirements.txt").path), "installer sync copies requirements")
     check(!fileManager.fileExists(atPath: destination.appendingPathComponent("library.json").path), "installer sync skips library.json")
+    check(!fileManager.fileExists(atPath: destination.appendingPathComponent("cache.json").path), "installer sync skips cache.json")
+    check(!fileManager.fileExists(atPath: destination.appendingPathComponent(".env.example").path), "installer sync skips local env example")
+    check(!fileManager.fileExists(atPath: destination.appendingPathComponent("tests").path), "installer sync skips tests")
     check(!fileManager.fileExists(atPath: destination.appendingPathComponent(".venv/bin/python").path), "installer sync skips bundled venv")
 
     check(ScannerInstaller.needsInstall(destinationRoot: destination, fileManager: fileManager), "installer needed without venv")
@@ -1042,6 +1067,14 @@ func bundledScannerReleaseChecks() {
         !fileManager.fileExists(atPath: scannerRoot.appendingPathComponent("library.json").path),
         "release bundle excludes library.json"
     )
+    check(
+        !fileManager.fileExists(atPath: scannerRoot.appendingPathComponent("cache.json").path),
+        "release bundle excludes cache.json"
+    )
+    check(
+        !fileManager.fileExists(atPath: scannerRoot.appendingPathComponent("tests").path),
+        "release bundle excludes scanner tests"
+    )
     if let scriptData = try? Data(contentsOf: scannerRoot.appendingPathComponent("scan_library.py")),
        let script = String(data: scriptData, encoding: .utf8) {
         check(script.contains("if __name__ == \"__main__\":"), "scan_library.py exposes CLI entrypoint")
@@ -1071,7 +1104,7 @@ func scanProgressChecks() {
     ScanProgressParser.ingest(line: "  analyzed 500/1010", into: &progress)
     check(progress.completed == 500, "scan progress parses analyzed counts")
     check(progress.step == .analyze, "scan progress marks analyze step")
-    var firstAnalyzeMessage = ScanProgressParser.statusMessage(
+    let firstAnalyzeMessage = ScanProgressParser.statusMessage(
         for: progress,
         startedAt: Date(timeIntervalSince1970: 0),
         now: Date(timeIntervalSince1970: 10)

@@ -276,16 +276,13 @@ public enum RekordboxLibraryBridge {
 
         let stdoutCollector = ProcessOutputCollector()
         let stderrCollector = ProcessOutputCollector()
-        stdoutCollector.startReading(stdoutPipe.fileHandleForReading)
-        stderrCollector.startReading(stderrPipe.fileHandleForReading)
-
         do {
             try process.run()
         } catch {
-            stdoutCollector.waitForOutput()
-            stderrCollector.waitForOutput()
             return LoadResult(playlists: [], message: error.localizedDescription)
         }
+        stdoutCollector.startReading(stdoutPipe.fileHandleForReading)
+        stderrCollector.startReading(stderrPipe.fileHandleForReading)
 
         let finished = DispatchSemaphore(value: 0)
         DispatchQueue.global(qos: .userInitiated).async {

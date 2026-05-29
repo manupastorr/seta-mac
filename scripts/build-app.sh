@@ -35,10 +35,16 @@ mkdir -p "$SCANNER_DEST"
 rsync -a \
   --exclude '.venv/' \
   --exclude 'library.json' \
+  --exclude 'cache.json' \
   --exclude '.env' \
+  --exclude '.env.example' \
+  --exclude '.gitignore' \
   --exclude '__pycache__/' \
   --exclude '.git/' \
   --exclude '.DS_Store' \
+  --exclude 'AGENTS.md' \
+  --exclude 'docs/' \
+  --exclude 'tests/' \
   "$SETA_SRC/" "$SCANNER_DEST/"
 
 python3 - "$SCANNER_DEST/requirements.txt" <<'PY'

@@ -19,7 +19,7 @@ public enum DraftStore {
     }
 
     public static func newDraftId() -> String {
-        "draft-\(String(Int(Date().timeIntervalSince1970 * 1000), radix: 36))"
+        "draft-\(UUID().uuidString.lowercased())"
     }
 
     public static func createDraft(name: String = "Setlist") -> SetaDraft {
@@ -29,18 +29,25 @@ public enum DraftStore {
     public static func normalizeDraft(_ raw: SetaDraft?) -> SetaDraft? {
         guard let raw else { return nil }
 
-        let trackIds = raw.trackIds.filter { !$0.isEmpty }
-        let finalIds = raw.finalIds.filter { trackIds.contains($0) }
+        var seenTrackIds = Set<String>()
+        let trackIds = raw.trackIds.filter { id in
+            !id.isEmpty && seenTrackIds.insert(id).inserted
+        }
+        var seenFinalIds = Set<String>()
+        let finalIds = raw.finalIds.filter { id in
+            trackIds.contains(id) && seenFinalIds.insert(id).inserted
+        }
         let sortMode = DraftSortMode.allCases.contains(raw.sortMode) ? raw.sortMode : .energy
         let name = raw.name.trimmingCharacters(in: .whitespacesAndNewlines)
         let id = raw.id.isEmpty ? newDraftId() : raw.id
+        let notes = raw.notes.filter { trackIds.contains($0.key) }
 
         return SetaDraft(
             id: id,
             name: name.isEmpty ? "Setlist" : name,
             trackIds: trackIds,
             finalIds: finalIds,
-            notes: raw.notes,
+            notes: notes,
             sortMode: sortMode,
             updatedAt: raw.updatedAt
         )

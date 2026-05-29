@@ -26,10 +26,16 @@ public enum ScannerInstaller {
     private static let excludedItemNames: Set<String> = [
         ".venv",
         "library.json",
+        "cache.json",
         ".env",
+        ".env.example",
+        ".gitignore",
         "__pycache__",
         ".git",
         ".DS_Store",
+        "AGENTS.md",
+        "docs",
+        "tests",
     ]
 
     public static func needsInstall(

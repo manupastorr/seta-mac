@@ -26,6 +26,11 @@ struct SetaMacApp: App {
                 Button("Library Folders…") { store.showingLibraryFolders = true }
                 Button("Rescan Library") { store.rescanLibrary() }
                     .keyboardShortcut("r", modifiers: [.command, .shift])
+                    .disabled(
+                        store.isRescanning
+                            || store.scannerRootURL == nil
+                            || !store.settings.hasConfiguredFolders
+                    )
             }
             CommandMenu("Playback") {
                 Button("Play / Pause") { store.togglePlayPause() }
