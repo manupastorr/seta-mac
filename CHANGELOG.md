@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.3
+
+- Fix **Rescan library** not writing `library.json` (bundled `scan_library.py` missing CLI entrypoint).
+- Do not show tracks until library folders are configured; release builds no longer auto-load the dev sibling scanner library.
+- Rescan uses only folders you pick in the app, not hidden `~/Music/tracks` defaults.
+
 ## 0.3.2
 
 - Fix scary missing `library.json` error on first install; guide users to run **Rescan library** after adding folders.
