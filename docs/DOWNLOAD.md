@@ -2,7 +2,7 @@
 
 Local-first macOS app for building DJ set drafts from a map of your library. Start with one track, explore smart candidates and bridges, then export a draft to Rekordbox or another DJ tool. It works with folders on your Mac; nothing is uploaded.
 
-**Latest release:** [SetaMac 0.3.0](https://github.com/manupastorr/seta-mac/releases/tag/v0.3.0) — download `SetaMac-0.3.0-macos14.zip`.
+**Latest release:** [SetaMac 0.3.1](https://github.com/manupastorr/seta-mac/releases/tag/v0.3.1) — download `SetaMac-0.3.1-macos14.zip`.
 
 | Requirement | Detail |
 |-------------|--------|
@@ -20,7 +20,7 @@ Local-first macOS app for building DJ set drafts from a map of your library. Sta
 
 ## Install
 
-1. Download `SetaMac-0.3.0-macos14.zip` from [Releases](https://github.com/manupastorr/seta-mac/releases/tag/v0.3.0).
+1. Download `SetaMac-0.3.1-macos14.zip` from [Releases](https://github.com/manupastorr/seta-mac/releases/tag/v0.3.1).
 2. Unzip and move **SetaMac.app** to Applications.
 3. First launch: right-click **SetaMac.app** → **Open** → **Open**.
 4. In SetaMac, click **Start setup** when asked. Keep the app open until setup finishes (a few minutes; internet required once).

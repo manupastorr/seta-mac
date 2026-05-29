@@ -10,7 +10,7 @@ Start from a seed track, explore smart candidates and bridge routes, repair weak
 
 ## Quick install
 
-1. Download `SetaMac-0.3.0-macos14.zip` from [Releases](https://github.com/manupastorr/seta-mac/releases).
+1. Download `SetaMac-0.3.1-macos14.zip` from [Releases](https://github.com/manupastorr/seta-mac/releases).
 2. Unzip it and move **SetaMac.app** to Applications.
 3. First launch: right-click **SetaMac.app** → **Open**.
 4. In SetaMac, run the one-time **Start setup** flow (internet required once).
