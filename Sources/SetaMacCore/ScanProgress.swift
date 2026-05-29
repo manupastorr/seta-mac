@@ -8,14 +8,32 @@ public struct ScanProgress: Equatable, Sendable {
         case finished
     }
 
+    public enum ScanStep: Equatable, Sendable {
+        case cache
+        case analyze
+    }
+
     public var phase: Phase
     public var total: Int?
     public var completed: Int?
+    public var step: ScanStep?
+    public var checkpointCompleted: Int?
+    public var checkpointAt: Date?
 
-    public init(phase: Phase = .starting, total: Int? = nil, completed: Int? = nil) {
+    public init(
+        phase: Phase = .starting,
+        total: Int? = nil,
+        completed: Int? = nil,
+        step: ScanStep? = nil,
+        checkpointCompleted: Int? = nil,
+        checkpointAt: Date? = nil
+    ) {
         self.phase = phase
         self.total = total
         self.completed = completed
+        self.step = step
+        self.checkpointCompleted = checkpointCompleted
+        self.checkpointAt = checkpointAt
     }
 }
 
@@ -28,16 +46,28 @@ public enum ScanProgressParser {
             if let total = parseCount(from: trimmed, prefix: "Found ", suffix: " audio files") {
                 progress.phase = .scanning
                 progress.total = total
-                if progress.completed == nil {
-                    progress.completed = 0
-                }
+                progress.completed = 0
+                progress.step = nil
+                progress.checkpointCompleted = nil
+                progress.checkpointAt = nil
             }
             return
         }
 
-        if trimmed.hasPrefix("cached ") || trimmed.hasPrefix("analyzed ") {
+        if trimmed.hasPrefix("cached ") {
             if let counts = parseProgressCounts(trimmed) {
                 progress.phase = .scanning
+                progress.step = .cache
+                progress.total = counts.total
+                progress.completed = counts.completed
+            }
+            return
+        }
+
+        if trimmed.hasPrefix("analyzed ") {
+            if let counts = parseProgressCounts(trimmed) {
+                progress.phase = .scanning
+                progress.step = .analyze
                 progress.total = counts.total
                 progress.completed = counts.completed
             }
@@ -50,6 +80,12 @@ public enum ScanProgressParser {
                 progress.completed = total
             }
         }
+    }
+
+    public static func finalizeCheckpoint(into progress: inout ScanProgress, now: Date = Date()) {
+        guard progress.step == .analyze, let completed = progress.completed else { return }
+        progress.checkpointCompleted = completed
+        progress.checkpointAt = now
     }
 
     public static func statusMessage(
@@ -74,19 +110,37 @@ public enum ScanProgressParser {
                 return "Scanning \(total) tracks…"
             }
 
-            let elapsed = max(now.timeIntervalSince(startedAt), 0.1)
-            let remainingCount = max(total - completed, 0)
-            if remainingCount == 0 {
-                return "Scanning \(completed)/\(total) · finishing…"
-            }
+            switch progress.step {
+            case .cache:
+                if completed >= total {
+                    return "Reading cache… \(completed)/\(total) · finishing…"
+                }
+                return "Reading cache… \(completed)/\(total) · analyzing new tracks next…"
 
-            let rate = Double(completed) / elapsed
-            if rate <= 0 {
+            case .analyze:
+                let remainingCount = max(total - completed, 0)
+                if remainingCount == 0 {
+                    return "Analyzing \(completed)/\(total) · finishing…"
+                }
+
+                if let checkpointCompleted = progress.checkpointCompleted,
+                   let checkpointAt = progress.checkpointAt,
+                   completed > checkpointCompleted,
+                   let rate = recentRate(
+                       completed: completed,
+                       lastCompleted: checkpointCompleted,
+                       lastProgressAt: checkpointAt,
+                       now: now
+                   ) {
+                    let etaSeconds = Double(remainingCount) / rate
+                    return "Analyzing \(completed)/\(total) · \(formatETA(seconds: etaSeconds))"
+                }
+
+                return "Analyzing \(completed)/\(total)…"
+
+            case nil:
                 return "Scanning \(completed)/\(total)…"
             }
-
-            let etaSeconds = Double(remainingCount) / rate
-            return "Scanning \(completed)/\(total) · \(formatETA(seconds: etaSeconds))"
         }
     }
 
@@ -98,6 +152,19 @@ public enum ScanProgressParser {
 
         let minutes = Int((Double(rounded) / 60.0).rounded())
         return minutes == 1 ? "~1 min left" : "~\(minutes) min left"
+    }
+
+    private static func recentRate(
+        completed: Int,
+        lastCompleted: Int,
+        lastProgressAt: Date,
+        now: Date
+    ) -> Double? {
+        let deltaCount = completed - lastCompleted
+        guard deltaCount > 0 else { return nil }
+        let deltaTime = now.timeIntervalSince(lastProgressAt)
+        guard deltaTime > 0 else { return nil }
+        return Double(deltaCount) / deltaTime
     }
 
     private static func parseCount(from line: String, prefix: String, suffix: String) -> Int? {
@@ -135,6 +202,7 @@ public final class ScanProgressTracker: @unchecked Sendable {
         lock.lock()
         ScanProgressParser.ingest(line: line, into: &progress)
         let message = ScanProgressParser.statusMessage(for: progress, startedAt: startedAt)
+        ScanProgressParser.finalizeCheckpoint(into: &progress)
         lock.unlock()
         onUpdate(message)
     }

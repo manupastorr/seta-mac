@@ -945,15 +945,34 @@ func scanProgressChecks() {
 
     ScanProgressParser.ingest(line: "  cached 250/1010", into: &progress)
     check(progress.completed == 250, "scan progress parses cached counts")
+    check(progress.step == .cache, "scan progress marks cache step")
+    let cacheMessage = ScanProgressParser.statusMessage(
+        for: progress,
+        startedAt: Date(timeIntervalSince1970: 0),
+        now: Date(timeIntervalSince1970: 5)
+    )
+    check(!cacheMessage.contains("left"), "scan progress hides eta during cache reads")
+    check(cacheMessage.contains("Reading cache"), "scan progress labels cache phase")
 
     ScanProgressParser.ingest(line: "  analyzed 500/1010", into: &progress)
     check(progress.completed == 500, "scan progress parses analyzed counts")
+    check(progress.step == .analyze, "scan progress marks analyze step")
+    var firstAnalyzeMessage = ScanProgressParser.statusMessage(
+        for: progress,
+        startedAt: Date(timeIntervalSince1970: 0),
+        now: Date(timeIntervalSince1970: 10)
+    )
+    check(!firstAnalyzeMessage.contains("left"), "scan progress hides eta until analysis rate is known")
+    ScanProgressParser.finalizeCheckpoint(into: &progress, now: Date(timeIntervalSince1970: 10))
 
-    let startedAt = Date(timeIntervalSince1970: 0)
-    let midway = Date(timeIntervalSince1970: 100)
-    let message = ScanProgressParser.statusMessage(for: progress, startedAt: startedAt, now: midway)
-    check(message.contains("500/1010"), "scan progress status includes counts")
-    check(message.contains("left"), "scan progress status includes eta")
+    ScanProgressParser.ingest(line: "  analyzed 750/1010", into: &progress)
+    let analyzeMessage = ScanProgressParser.statusMessage(
+        for: progress,
+        startedAt: Date(timeIntervalSince1970: 0),
+        now: Date(timeIntervalSince1970: 20)
+    )
+    check(analyzeMessage.contains("750/1010"), "scan progress status includes analyzed counts")
+    check(analyzeMessage.contains("left"), "scan progress shows eta during analysis")
 
     check(ScanProgressParser.formatETA(seconds: 45) == "~45 sec left", "scan progress eta seconds")
     check(ScanProgressParser.formatETA(seconds: 120) == "~2 min left", "scan progress eta minutes")
