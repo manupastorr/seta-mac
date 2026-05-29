@@ -22,7 +22,8 @@ Local-first macOS app for building DJ set drafts from a map of your library. Sta
 
 1. Download `SetaMac-0.3.1-macos14.zip` from [Releases](https://github.com/manupastorr/seta-mac/releases/tag/v0.3.1).
 2. Unzip and move **SetaMac.app** to Applications.
-3. First launch: right-click **SetaMac.app** → **Open** → **Open**.
+3. **First launch:** right-click **SetaMac.app** → **Open** → **Open**.  
+   If macOS says **“damaged”**, see [If macOS blocks the app](#if-macos-blocks-the-app).
 4. In SetaMac, click **Start setup** when asked. Keep the app open until setup finishes (a few minutes; internet required once).
 5. Click **Continue**, then add your music folders in **Library → Library Folders…**.
 6. Click **Rescan library** after adding or changing folders.
@@ -31,52 +32,34 @@ Removing a folder or track in SetaMac does **not** delete your audio files.
 
 ## Troubleshooting
 
-| Problem | What to do |
-|---------|------------|
-| “App can’t be opened” | Right-click **SetaMac.app** → **Open** → **Open** again. |
-| “App is damaged” | See [macOS blocked the app](#macos-blocked-the-app) below. |
-| Setup failed | Check internet, click **Try again**, or restart SetaMac. |
-| Empty map / **Rescan** disabled | Finish setup first, then add folders in **Library Folders…**. |
-| Scan failed | Confirm the folder was added and try **Rescan library** again. |
+**Setup failed** → check internet, click **Try again**.  
+**Empty map** → finish setup, add folders, click **Rescan library**.
 
-### macOS blocked the app
+### If macOS blocks the app
 
-SetaMac is not from the App Store yet, so macOS may block the first open. That is normal. It does **not** mean the app is broken.
+Normal for apps outside the App Store. The app is not broken.
 
-**Try this first (no Terminal):**
+**Step 1 — try this**
 
-1. Click **Cancel** if macOS says the app is damaged.
-2. **Right-click** `SetaMac.app` (do not double-click).
-3. Choose **Open**.
-4. Click **Open** again in the dialog.
+1. Click **Cancel** (not Move to Trash).
+2. Right-click **SetaMac.app** → **Open** → **Open**.
 
-**If it still says “damaged”:**
+**Step 2 — if it still says “damaged”**
 
-1. Open **Terminal** (see below).
-2. Paste this line and press **Return**:
+1. Open **Terminal:** press **⌘ Space**, type `Terminal`, press **Return**.
+2. Paste this, then press **Return**:
 
 ```bash
 xattr -cr /Applications/SetaMac.app
 ```
 
-If SetaMac is not in Applications, change the path. Example for Downloads:
+3. Open SetaMac again.
+
+Still in Downloads? Use:
 
 ```bash
 xattr -cr ~/Downloads/SetaMac.app
 ```
-
-3. Open SetaMac again.
-
-**Optional:** Open **System Settings** → **Privacy & Security** → scroll down. If you see **Open Anyway** for SetaMac, click it, then open the app again.
-
-#### How to open Terminal
-
-1. Press **Command + Space** to open Spotlight.
-2. Type **Terminal**.
-3. Press **Return**.
-4. A window with a prompt like `%` or `$` opens. Paste the command there.
-
-You are not “coding” — you are just pasting one line so macOS allows the app to run.
 
 ## Developer install (optional)
 
