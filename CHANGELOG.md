@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.5
+
+- Fix misleading scan ETA during cache reads; show time remaining only during actual audio analysis.
+
 ## 0.3.4
 
 - Show live scan progress with track counts and estimated time remaining during **Rescan library**.
