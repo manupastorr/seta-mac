@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.6
+
+- Fix scanner refresh so existing installs receive updated bundled scanner files.
+- Run scanner analysis with one worker for macOS stability.
+- Pin bundled Librosa below 0.11 to avoid scanner crashes during audio analysis.
+- Add release checks for scanner entrypoint, explicit roots, and dependency pinning.
+
 ## 0.3.5
 
 - Fix misleading scan ETA during cache reads; show time remaining only during actual audio analysis.
