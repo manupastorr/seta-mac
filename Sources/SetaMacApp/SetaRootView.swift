@@ -23,13 +23,15 @@ struct SetaRootView: View {
             .sheet(isPresented: $store.showingLibraryFolders) {
                 LibraryFoldersSheet(store: store)
             }
+            .sheet(isPresented: $store.showingScannerSetup) {
+                ScannerSetupSheet(store: store)
+                    .interactiveDismissDisabled(
+                        store.isRunningScannerSetup
+                            || (store.needsScannerSetup && !store.scannerSetupCompleted && !store.scannerSetupFailed)
+                    )
+            }
             .task {
-                if store.library == nil {
-                    store.autoLoadLibraryIfPossible()
-                }
-                if store.needsFolderSetup {
-                    store.showingLibraryFolders = true
-                }
+                store.prepareInitialLaunchFlow()
             }
             .applyKeyboardShortcuts(store: store, mapResetTrigger: $mapResetTrigger, searchFocused: $searchFocused)
             .background(WindowTitleSetter(title: "Seta 🍄"))

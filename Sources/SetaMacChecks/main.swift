@@ -764,6 +764,32 @@ func scannerPathsChecks() throws {
     )
     check(candidates.contains(ScannerPaths.libraryJSON(at: appSupport)), "library candidates include app support scanner")
     check(candidates.contains(ScannerPaths.libraryJSON(at: legacy)), "library candidates include legacy scanner")
+
+    check(
+        !ScannerPaths.needsInAppSetup(
+            settings: AppSettings(setaScannerRoot: readyRoot.path),
+            homeDirectory: homeOverride,
+            fileManager: fileManager
+        ),
+        "in-app setup not needed when configured scanner is ready"
+    )
+
+    let devSibling = tempRoot.appendingPathComponent("seta", isDirectory: true)
+    try fileManager.createDirectory(at: devSibling, withIntermediateDirectories: true)
+    fileManager.createFile(atPath: devSibling.appendingPathComponent("scan_library.py").path, contents: Data())
+    let devSourceFile = tempRoot
+        .appendingPathComponent("seta-mac/Sources/SetaMacApp/SetaMacApp.swift", isDirectory: false)
+    try fileManager.createDirectory(at: devSourceFile.deletingLastPathComponent(), withIntermediateDirectories: true)
+    fileManager.createFile(atPath: devSourceFile.path, contents: Data())
+    check(
+        ScannerPaths.needsInAppSetup(
+            settings: fallbackSettings,
+            devSiblingSourceFilePath: devSourceFile.path,
+            homeDirectory: homeOverride,
+            fileManager: fileManager
+        ),
+        "in-app setup needed when install source exists but scanner is not ready"
+    )
 }
 
 func scannerInstallerChecks() throws {

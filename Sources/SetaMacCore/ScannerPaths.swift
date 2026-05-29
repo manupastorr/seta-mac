@@ -145,4 +145,55 @@ public enum ScannerPaths {
         )
         return candidates
     }
+
+    public static func hasRunnableScanner(
+        settings: AppSettings,
+        bundle: Bundle = .main,
+        devSiblingSourceFilePath: String? = nil,
+        homeDirectory: URL? = nil,
+        fileManager: FileManager = .default
+    ) -> Bool {
+        guard let root = preferredScannerRoot(
+            settings: settings,
+            bundle: bundle,
+            devSiblingSourceFilePath: devSiblingSourceFilePath,
+            homeDirectory: homeDirectory,
+            fileManager: fileManager
+        ) else {
+            return false
+        }
+        return isScannerReady(at: root, fileManager: fileManager)
+    }
+
+    public static func canInstallScanner(
+        bundle: Bundle = .main,
+        devSiblingSourceFilePath: String? = nil,
+        fileManager: FileManager = .default
+    ) -> Bool {
+        bundledScannerRoot(bundle: bundle, fileManager: fileManager) != nil
+            || (devSiblingSourceFilePath.flatMap { devSiblingScannerRoot(sourceFilePath: $0, fileManager: fileManager) } != nil)
+    }
+
+    public static func needsInAppSetup(
+        settings: AppSettings,
+        bundle: Bundle = .main,
+        devSiblingSourceFilePath: String? = nil,
+        homeDirectory: URL? = nil,
+        fileManager: FileManager = .default
+    ) -> Bool {
+        if hasRunnableScanner(
+            settings: settings,
+            bundle: bundle,
+            devSiblingSourceFilePath: devSiblingSourceFilePath,
+            homeDirectory: homeDirectory,
+            fileManager: fileManager
+        ) {
+            return false
+        }
+        return canInstallScanner(
+            bundle: bundle,
+            devSiblingSourceFilePath: devSiblingSourceFilePath,
+            fileManager: fileManager
+        )
+    }
 }

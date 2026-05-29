@@ -47,6 +47,13 @@ final class LibraryStore: ObservableObject {
     @Published var isLoadingRekordboxImport = false
     @Published var showingRekordboxFileImporter = false
     @Published var showingLibraryFolders = false
+    @Published var showingScannerSetup = false
+    @Published var scannerSetupPhase: ScannerInstallerPhase?
+    @Published var scannerSetupMessage = ""
+    @Published var scannerSetupDetail = ""
+    @Published var isRunningScannerSetup = false
+    @Published var scannerSetupFailed = false
+    @Published var scannerSetupCompleted = false
     @Published var excludedTrackPaths: Set<String> = []
 
     let player = AudioPlayerController()
@@ -303,6 +310,109 @@ extension LibraryStore {
             settings: settings,
             devSiblingSourceFilePath: #filePath
         )
+    }
+
+    var needsScannerSetup: Bool {
+        ScannerPaths.needsInAppSetup(
+            settings: settings,
+            devSiblingSourceFilePath: #filePath
+        )
+    }
+
+    var scannerInstallSourceURL: URL? {
+        ScannerPaths.bundledScannerRoot()
+            ?? ScannerPaths.devSiblingScannerRoot(sourceFilePath: #filePath)
+    }
+
+    func prepareInitialLaunchFlow() {
+        if needsScannerSetup {
+            resetScannerSetupPresentation()
+            showingScannerSetup = true
+            return
+        }
+        completeInitialLaunchFlowAfterScannerSetup()
+    }
+
+    func runScannerSetup() {
+        guard !isRunningScannerSetup else { return }
+        guard let source = scannerInstallSourceURL else {
+            scannerSetupFailed = true
+            scannerSetupMessage = "Scanner files were not found inside SetaMac."
+            scannerSetupDetail = ""
+            return
+        }
+
+        isRunningScannerSetup = true
+        scannerSetupFailed = false
+        scannerSetupCompleted = false
+        scannerSetupDetail = ""
+        scannerSetupPhase = .preparing
+        scannerSetupMessage = Self.scannerSetupLabel(for: .preparing)
+
+        Task {
+            let result = await Task.detached(priority: .userInitiated) { [source] in
+                ScannerInstaller.install(bundledRoot: source) { phase in
+                    Task { @MainActor in
+                        self.scannerSetupPhase = phase
+                        self.scannerSetupMessage = Self.scannerSetupLabel(for: phase)
+                    }
+                }
+            }.value
+
+            isRunningScannerSetup = false
+            scannerSetupPhase = .finished
+            if result.success, let root = result.scannerRoot {
+                settings.setaScannerRoot = root.path
+                AppSettings.save(settings)
+                scannerSetupCompleted = true
+                scannerSetupFailed = false
+                scannerSetupMessage = result.message
+                statusMessage = result.message
+            } else {
+                scannerSetupCompleted = false
+                scannerSetupFailed = true
+                scannerSetupMessage = result.message
+                scannerSetupDetail = result.output
+            }
+        }
+    }
+
+    func finishScannerSetup() {
+        showingScannerSetup = false
+        completeInitialLaunchFlowAfterScannerSetup()
+    }
+
+    func resetScannerSetupPresentation() {
+        scannerSetupPhase = nil
+        scannerSetupMessage = ""
+        scannerSetupDetail = ""
+        isRunningScannerSetup = false
+        scannerSetupFailed = false
+        scannerSetupCompleted = false
+    }
+
+    private func completeInitialLaunchFlowAfterScannerSetup() {
+        if library == nil {
+            autoLoadLibraryIfPossible()
+        }
+        if needsFolderSetup {
+            showingLibraryFolders = true
+        }
+    }
+
+    private static func scannerSetupLabel(for phase: ScannerInstallerPhase) -> String {
+        switch phase {
+        case .preparing:
+            return "Preparing setup…"
+        case .copyingFiles:
+            return "Copying scanner files…"
+        case .creatingEnvironment:
+            return "Creating Python environment…"
+        case .installingDependencies:
+            return "Installing dependencies…"
+        case .finished:
+            return "Setup complete."
+        }
     }
 
     func autoLoadLibraryIfPossible() {
