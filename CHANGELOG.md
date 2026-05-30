@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.9
+
+- Show scanned tracks on the map in batches while **Rescan library** continues in the background.
+- Add a disposable `scan-progress.json` handoff so first scans no longer look empty until completion.
+- Keep partial scan results out of release bundles and in-app scanner refreshes.
+- Extend scanner/app tests for partial library contracts, progress parsing, and packaging exclusions.
+
 ## 0.3.8
 
 - Prevent duplicate rescans and stop scans from running when no configured folder can be accessed.

@@ -2,7 +2,7 @@
 
 Local-first macOS app for building DJ set drafts from a map of your library. Start with one track, explore smart candidates and bridges, then export a draft to Rekordbox or another DJ tool. It works with folders on your Mac; nothing is uploaded.
 
-**Latest release:** [SetaMac 0.3.8](https://github.com/manupastorr/seta-mac/releases/tag/v0.3.8) — download `SetaMac-0.3.8-macos14.zip`.
+**Latest release:** [SetaMac 0.3.9](https://github.com/manupastorr/seta-mac/releases/tag/v0.3.9) — download `SetaMac-0.3.9-macos14.zip`.
 
 | Requirement | Detail |
 |-------------|--------|
@@ -20,20 +20,20 @@ Local-first macOS app for building DJ set drafts from a map of your library. Sta
 
 ## Install
 
-1. Download `SetaMac-0.3.8-macos14.zip` from [Releases](https://github.com/manupastorr/seta-mac/releases/tag/v0.3.8).
+1. Download `SetaMac-0.3.9-macos14.zip` from [Releases](https://github.com/manupastorr/seta-mac/releases/tag/v0.3.9).
 2. Unzip and move **SetaMac.app** to Applications.
 3. **First launch:** right-click **SetaMac.app** → **Open** → **Open**.  
    If macOS says **“damaged”**, see [If macOS blocks the app](#if-macos-blocks-the-app).
 4. In SetaMac, click **Start setup** when asked. Keep the app open until setup finishes (a few minutes; internet required once).
 5. Click **Continue**, then add your music folders in **Library → Library Folders…**.
-6. Click **Rescan library**. This creates the library file and fills the map.
+6. Click **Rescan library**. Tracks appear on the map in batches while analysis continues; the final library file is saved when the scan finishes.
 
 Removing a folder or track in SetaMac does **not** delete your audio files.
 
 ## Troubleshooting
 
 **Setup failed** → check internet, click **Try again**.  
-**Empty map** → finish setup, add folders, click **Rescan library**.
+**Empty map** → finish setup, add folders, click **Rescan library**. On first scans, the map starts filling after the first analyzed batch.
 
 ### If macOS blocks the app
 

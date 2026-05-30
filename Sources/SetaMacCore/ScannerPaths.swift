@@ -118,6 +118,10 @@ public enum ScannerPaths {
         scannerRoot.appendingPathComponent("library.json")
     }
 
+    public static func partialLibraryJSON(at scannerRoot: URL) -> URL {
+        scannerRoot.appendingPathComponent("scan-progress.json")
+    }
+
     public static func defaultLibraryCandidates(
         settings: AppSettings,
         bundle: Bundle = .main,

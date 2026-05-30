@@ -149,6 +149,30 @@ func duplicateTrackIDsCanBeSanitizedForDisplay() throws {
     check(lookup.count == 2, "display tracks can build unique id lookup")
 }
 
+func partialLibraryContractAllowsIncompleteTrackList() throws {
+    let json = """
+    {
+      "scan_status": "running",
+      "is_partial": true,
+      "completed_count": 1,
+      "track_count": 3,
+      "tracks": [
+        { "id": "a", "path": "/tracks/Artist - One.wav", "source": "tracks", "bpm": 128.0, "key": "8A" }
+      ],
+      "edges": []
+    }
+    """
+
+    let library = try decodeLibraryFixture(json)
+    check(library.isPartial == true, "partial library flag decodes")
+    check(library.completedCount == 1, "partial completed count decodes")
+    check(library.trackCount == 3, "partial library preserves discovered total")
+    check(library.validationIssues().isEmpty, "partial library permits incomplete tracks")
+
+    let displayLibrary = library.removingDuplicateTrackIDs()
+    check(displayLibrary.trackCount == 3, "partial duplicate removal preserves discovered total")
+}
+
 func camelotParityValues() {
     check(Camelot.compatible("8A", "8A") == 1, "same key")
     check(Camelot.compatible("8A", "8B") == 0.82, "relative major/minor")
@@ -958,6 +982,7 @@ func scannerInstallerChecks() throws {
     fileManager.createFile(atPath: bundled.appendingPathComponent("requirements.txt").path, contents: Data())
     fileManager.createFile(atPath: bundled.appendingPathComponent("library.json").path, contents: Data("{}".utf8))
     fileManager.createFile(atPath: bundled.appendingPathComponent("cache.json").path, contents: Data("{}".utf8))
+    fileManager.createFile(atPath: bundled.appendingPathComponent("scan-progress.json").path, contents: Data("{}".utf8))
     fileManager.createFile(atPath: bundled.appendingPathComponent(".env.example").path, contents: Data())
     let bundledTests = bundled.appendingPathComponent("tests", isDirectory: true)
     try fileManager.createDirectory(at: bundledTests, withIntermediateDirectories: true)
@@ -968,6 +993,7 @@ func scannerInstallerChecks() throws {
     check(fileManager.fileExists(atPath: destination.appendingPathComponent("requirements.txt").path), "installer sync copies requirements")
     check(!fileManager.fileExists(atPath: destination.appendingPathComponent("library.json").path), "installer sync skips library.json")
     check(!fileManager.fileExists(atPath: destination.appendingPathComponent("cache.json").path), "installer sync skips cache.json")
+    check(!fileManager.fileExists(atPath: destination.appendingPathComponent("scan-progress.json").path), "installer sync skips scan-progress.json")
     check(!fileManager.fileExists(atPath: destination.appendingPathComponent(".env.example").path), "installer sync skips local env example")
     check(!fileManager.fileExists(atPath: destination.appendingPathComponent("tests").path), "installer sync skips tests")
     check(!fileManager.fileExists(atPath: destination.appendingPathComponent(".venv/bin/python").path), "installer sync skips bundled venv")
@@ -1072,6 +1098,10 @@ func bundledScannerReleaseChecks() {
         "release bundle excludes cache.json"
     )
     check(
+        !fileManager.fileExists(atPath: scannerRoot.appendingPathComponent("scan-progress.json").path),
+        "release bundle excludes scan-progress.json"
+    )
+    check(
         !fileManager.fileExists(atPath: scannerRoot.appendingPathComponent("tests").path),
         "release bundle excludes scanner tests"
     )
@@ -1112,6 +1142,10 @@ func scanProgressChecks() {
     check(!firstAnalyzeMessage.contains("left"), "scan progress hides eta until analysis rate is known")
     ScanProgressParser.finalizeCheckpoint(into: &progress, now: Date(timeIntervalSince1970: 10))
 
+    ScanProgressParser.ingest(line: "  partial 625/1010", into: &progress)
+    check(progress.completed == 625, "scan progress parses partial library counts")
+    check(ScanProgressParser.isPartialLibraryLine("  partial 625/1010"), "scan progress detects partial library line")
+
     ScanProgressParser.ingest(line: "  analyzed 750/1010", into: &progress)
     let analyzeMessage = ScanProgressParser.statusMessage(
         for: progress,
@@ -1129,6 +1163,7 @@ do {
     try decodesCurrentLibraryContract()
     try validationFindsContractIssues()
     try duplicateTrackIDsCanBeSanitizedForDisplay()
+    try partialLibraryContractAllowsIncompleteTrackList()
     camelotParityValues()
     try filterAndDraftHelpers()
     try playbackHelpers()

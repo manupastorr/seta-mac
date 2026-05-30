@@ -443,6 +443,17 @@ extension LibraryStore {
     }
 
     func load(url: URL, remember: Bool = true) {
+        loadScannedLibrary(url: url, remember: remember, stopPlayback: true)
+    }
+
+    private func loadPartialLibrary(url: URL) {
+        guard isRescanning, FileManager.default.fileExists(atPath: url.path) else {
+            return
+        }
+        loadScannedLibrary(url: url, remember: false, stopPlayback: false)
+    }
+
+    private func loadScannedLibrary(url: URL, remember: Bool, stopPlayback: Bool) {
         guard FileManager.default.fileExists(atPath: url.path) else {
             if settings.lastLibraryPath == url.path {
                 settings.lastLibraryPath = nil
@@ -476,9 +487,11 @@ extension LibraryStore {
                 self.library = libraryWithOverrides
                 self.issues = decodedIssues
                 self.invalidateLibraryDerivedCaches()
-                self.player.stop()
-                self.playingTrackID = nil
-                self.suppressPlaybackUntil = Date().addingTimeInterval(1.0)
+                if stopPlayback {
+                    self.player.stop()
+                    self.playingTrackID = nil
+                    self.suppressPlaybackUntil = Date().addingTimeInterval(1.0)
+                }
                 if let selectedTrackID = self.selectedTrackID,
                    libraryWithOverrides.tracks.contains(where: { $0.id == selectedTrackID }) == false {
                     self.selectedTrackID = nil
@@ -514,7 +527,10 @@ extension LibraryStore {
             curateRoot: library.curateRoot,
             tracksRoots: library.tracksRoots,
             curateRoots: library.curateRoots,
-            trackCount: tracks.count,
+            scanStatus: library.scanStatus,
+            isPartial: library.isPartial,
+            completedCount: library.completedCount.map { min($0, tracks.count) },
+            trackCount: library.isPartial == true ? library.trackCount : tracks.count,
             tracks: tracks,
             edges: library.edges.filter { visibleIDs.contains($0.source) && visibleIDs.contains($0.target) }
         )
@@ -530,6 +546,9 @@ extension LibraryStore {
             curateRoot: library.curateRoot,
             tracksRoots: library.tracksRoots,
             curateRoots: library.curateRoots,
+            scanStatus: library.scanStatus,
+            isPartial: library.isPartial,
+            completedCount: library.completedCount,
             trackCount: library.trackCount,
             tracks: tracks,
             edges: library.edges
@@ -610,6 +629,8 @@ extension LibraryStore {
             statusMessage = "Preparing scan…"
         }
         let excluded = Array(excludedTrackPaths)
+        let partialLibraryURL = ScannerPaths.partialLibraryJSON(at: scannerRoot)
+        try? FileManager.default.removeItem(at: partialLibraryURL)
         let progressTracker = ScanProgressTracker { [weak self] message in
             Task { @MainActor in
                 self?.statusMessage = message
@@ -627,7 +648,14 @@ extension LibraryStore {
                     curateRoots: curateRoots,
                     excludedPaths: excluded,
                     quick: true,
-                    onLine: { progressTracker.handleLine($0) }
+                    onLine: { [weak self] line in
+                        progressTracker.handleLine(line)
+                        if ScanProgressParser.isPartialLibraryLine(line) {
+                            Task { @MainActor in
+                                self?.loadPartialLibrary(url: partialLibraryURL)
+                            }
+                        }
+                    }
                 )
             }.value
             isRescanning = false

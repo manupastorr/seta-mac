@@ -27,6 +27,7 @@ public enum ScannerInstaller {
         ".venv",
         "library.json",
         "cache.json",
+        "scan-progress.json",
         ".env",
         ".env.example",
         ".gitignore",

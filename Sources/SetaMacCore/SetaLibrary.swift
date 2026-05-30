@@ -6,6 +6,9 @@ public struct SetaLibrary: Decodable, Equatable, Sendable {
     public let curateRoot: String?
     public let tracksRoots: [String]?
     public let curateRoots: [String]?
+    public let scanStatus: String?
+    public let isPartial: Bool?
+    public let completedCount: Int?
     public let trackCount: Int
     public let tracks: [SetaTrack]
     public let edges: [SetaEdge]
@@ -16,6 +19,9 @@ public struct SetaLibrary: Decodable, Equatable, Sendable {
         curateRoot: String? = nil,
         tracksRoots: [String]? = nil,
         curateRoots: [String]? = nil,
+        scanStatus: String? = nil,
+        isPartial: Bool? = nil,
+        completedCount: Int? = nil,
         trackCount: Int,
         tracks: [SetaTrack],
         edges: [SetaEdge]
@@ -25,6 +31,9 @@ public struct SetaLibrary: Decodable, Equatable, Sendable {
         self.curateRoot = curateRoot
         self.tracksRoots = tracksRoots
         self.curateRoots = curateRoots
+        self.scanStatus = scanStatus
+        self.isPartial = isPartial
+        self.completedCount = completedCount
         self.trackCount = trackCount
         self.tracks = tracks
         self.edges = edges
@@ -36,6 +45,9 @@ public struct SetaLibrary: Decodable, Equatable, Sendable {
         case curateRoot = "curate_root"
         case tracksRoots = "tracks_roots"
         case curateRoots = "curate_roots"
+        case scanStatus = "scan_status"
+        case isPartial = "is_partial"
+        case completedCount = "completed_count"
         case trackCount = "track_count"
         case tracks
         case edges
@@ -47,7 +59,14 @@ public struct SetaLibrary: Decodable, Equatable, Sendable {
 
     public func validationIssues() -> [String] {
         var issues: [String] = []
-        if trackCount != tracks.count {
+        if isPartial == true {
+            if let completedCount, completedCount != tracks.count {
+                issues.append("completed_count \(completedCount) != tracks.count \(tracks.count)")
+            }
+            if trackCount < tracks.count {
+                issues.append("track_count \(trackCount) < tracks.count \(tracks.count)")
+            }
+        } else if trackCount != tracks.count {
             issues.append("track_count \(trackCount) != tracks.count \(tracks.count)")
         }
 
@@ -115,7 +134,10 @@ public struct SetaLibrary: Decodable, Equatable, Sendable {
             curateRoot: curateRoot,
             tracksRoots: tracksRoots,
             curateRoots: curateRoots,
-            trackCount: uniqueTracks.count,
+            scanStatus: scanStatus,
+            isPartial: isPartial,
+            completedCount: completedCount.map { min($0, uniqueTracks.count) },
+            trackCount: isPartial == true ? trackCount : uniqueTracks.count,
             tracks: uniqueTracks,
             edges: edges.filter { visibleIDs.contains($0.source) && visibleIDs.contains($0.target) }
         )

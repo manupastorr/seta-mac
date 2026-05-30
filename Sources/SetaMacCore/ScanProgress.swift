@@ -74,6 +74,16 @@ public enum ScanProgressParser {
             return
         }
 
+        if trimmed.hasPrefix("partial ") {
+            if let counts = parseProgressCounts(trimmed) {
+                progress.phase = .scanning
+                progress.step = .analyze
+                progress.total = counts.total
+                progress.completed = counts.completed
+            }
+            return
+        }
+
         if trimmed.hasPrefix("Wrote ") {
             progress.phase = .finished
             if let total = progress.total {
@@ -152,6 +162,10 @@ public enum ScanProgressParser {
 
         let minutes = Int((Double(rounded) / 60.0).rounded())
         return minutes == 1 ? "~1 min left" : "~\(minutes) min left"
+    }
+
+    public static func isPartialLibraryLine(_ line: String) -> Bool {
+        line.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("partial ")
     }
 
     private static func recentRate(

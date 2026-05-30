@@ -3,13 +3,17 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SETA_ROOT="$(cd "$ROOT/../seta" && pwd)"
+SWIFT_BUILD_FLAGS_ARRAY=()
+if [[ -n "${SWIFT_BUILD_FLAGS:-}" ]]; then
+  read -r -a SWIFT_BUILD_FLAGS_ARRAY <<< "$SWIFT_BUILD_FLAGS"
+fi
 
 echo "== SetaMac checks =="
 cd "$ROOT"
-swift run SetaMacChecks
+swift run "${SWIFT_BUILD_FLAGS_ARRAY[@]}" SetaMacChecks
 
 echo "== SetaMac release build =="
-swift build -c release --product SetaMac
+swift build "${SWIFT_BUILD_FLAGS_ARRAY[@]}" -c release --product SetaMac
 
 echo "== SetaMac app bundle =="
 ./scripts/build-app.sh
@@ -23,6 +27,7 @@ test -f "$SCANNER/requirements.txt"
 test ! -e "$SCANNER/.venv"
 test ! -f "$SCANNER/library.json"
 test ! -f "$SCANNER/cache.json"
+test ! -f "$SCANNER/scan-progress.json"
 test ! -d "$SCANNER/tests"
 echo "Bundled scanner files OK in $APP_BUNDLE"
 

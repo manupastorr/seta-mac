@@ -12,7 +12,11 @@ VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 BUILD_NUMBER="${SETA_BUILD_NUMBER:-1}"
 
 echo "Building $PRODUCT $VERSION (release)..."
-swift build -c release --product "$PRODUCT"
+SWIFT_BUILD_FLAGS_ARRAY=()
+if [[ -n "${SWIFT_BUILD_FLAGS:-}" ]]; then
+  read -r -a SWIFT_BUILD_FLAGS_ARRAY <<< "$SWIFT_BUILD_FLAGS"
+fi
+swift build "${SWIFT_BUILD_FLAGS_ARRAY[@]}" -c release --product "$PRODUCT"
 
 echo "Packaging $APP_DIR..."
 rm -rf "$APP_DIR"
@@ -36,6 +40,7 @@ rsync -a \
   --exclude '.venv/' \
   --exclude 'library.json' \
   --exclude 'cache.json' \
+  --exclude 'scan-progress.json' \
   --exclude '.env' \
   --exclude '.env.example' \
   --exclude '.gitignore' \
