@@ -25,12 +25,12 @@ mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
 cp "$BUILD_DIR/$PRODUCT" "$APP_DIR/Contents/MacOS/$PRODUCT"
 cp "$ROOT/LICENSE" "$APP_DIR/Contents/Resources/LICENSE"
 
-SETA_SRC="${SETA_SRC:-$ROOT/../seta}"
+SETA_SRC="${SETA_SRC:-$ROOT/Scanner}"
 SCANNER_DEST="$APP_DIR/Contents/Resources/Scanner"
 
 if [[ ! -f "$SETA_SRC/scan_library.py" ]]; then
   echo "Seta scanner not found at $SETA_SRC"
-  echo "Set SETA_SRC to the seta repo path before building."
+  echo "Set SETA_SRC to a scanner source path before building."
   exit 1
 fi
 

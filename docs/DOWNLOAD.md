@@ -61,17 +61,9 @@ Still in Downloads? Use:
 xattr -cr ~/Downloads/SetaMac.app
 ```
 
-## Developer install (optional)
+## Developer notes
 
-If you prefer the standalone Python scanner repo instead of the in-app setup:
-
-```bash
-git clone https://github.com/manupastorr/seta.git
-cd seta
-./start.sh
-```
-
-Keep the scanner repo anywhere you like and point SetaMac at it only if you configure that path explicitly after the first scan.
+SetaMac bundles the production scanner from the `Scanner/` folder in this repo. The older standalone `seta` repo is no longer required for app releases.
 
 ## Screenshots
 

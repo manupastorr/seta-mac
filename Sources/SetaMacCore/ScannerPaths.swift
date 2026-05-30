@@ -31,17 +31,16 @@ public enum ScannerPaths {
         return isScannerInstalled(at: root, fileManager: fileManager) ? root : nil
     }
 
-    public static func devSiblingScannerRoot(
+    public static func devRepositoryScannerRoot(
         sourceFilePath: String,
         fileManager: FileManager = .default
     ) -> URL? {
-        let sibling = URL(fileURLWithPath: sourceFilePath)
+        let scanner = URL(fileURLWithPath: sourceFilePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("seta", isDirectory: true)
-        return isScannerInstalled(at: sibling, fileManager: fileManager) ? sibling : nil
+            .appendingPathComponent("Scanner", isDirectory: true)
+        return isScannerInstalled(at: scanner, fileManager: fileManager) ? scanner : nil
     }
 
     public static func isScannerInstalled(
@@ -93,7 +92,7 @@ public enum ScannerPaths {
     public static func preferredScannerRoot(
         settings: AppSettings,
         bundle: Bundle = .main,
-        devSiblingSourceFilePath: String? = nil,
+        devRepositorySourceFilePath: String? = nil,
         homeDirectory: URL? = nil,
         fileManager: FileManager = .default
     ) -> URL? {
@@ -106,9 +105,9 @@ public enum ScannerPaths {
             return appSupport
         }
 
-        if let devSiblingSourceFilePath,
-           let sibling = devSiblingScannerRoot(sourceFilePath: devSiblingSourceFilePath, fileManager: fileManager) {
-            return sibling
+        if let devRepositorySourceFilePath,
+           let scanner = devRepositoryScannerRoot(sourceFilePath: devRepositorySourceFilePath, fileManager: fileManager) {
+            return scanner
         }
 
         return nil
@@ -125,7 +124,7 @@ public enum ScannerPaths {
     public static func defaultLibraryCandidates(
         settings: AppSettings,
         bundle: Bundle = .main,
-        devSiblingSourceFilePath: String? = nil,
+        devRepositorySourceFilePath: String? = nil,
         homeDirectory: URL? = nil,
         fileManager: FileManager = .default
     ) -> [URL] {
@@ -148,7 +147,7 @@ public enum ScannerPaths {
            let root = preferredScannerRoot(
             settings: settings,
             bundle: bundle,
-            devSiblingSourceFilePath: devSiblingSourceFilePath,
+            devRepositorySourceFilePath: devRepositorySourceFilePath,
             homeDirectory: homeDirectory,
             fileManager: fileManager
         ) {
@@ -164,14 +163,14 @@ public enum ScannerPaths {
     public static func hasRunnableScanner(
         settings: AppSettings,
         bundle: Bundle = .main,
-        devSiblingSourceFilePath: String? = nil,
+        devRepositorySourceFilePath: String? = nil,
         homeDirectory: URL? = nil,
         fileManager: FileManager = .default
     ) -> Bool {
         guard let root = preferredScannerRoot(
             settings: settings,
             bundle: bundle,
-            devSiblingSourceFilePath: devSiblingSourceFilePath,
+            devRepositorySourceFilePath: devRepositorySourceFilePath,
             homeDirectory: homeDirectory,
             fileManager: fileManager
         ) else {
@@ -182,17 +181,17 @@ public enum ScannerPaths {
 
     public static func canInstallScanner(
         bundle: Bundle = .main,
-        devSiblingSourceFilePath: String? = nil,
+        devRepositorySourceFilePath: String? = nil,
         fileManager: FileManager = .default
     ) -> Bool {
         bundledScannerRoot(bundle: bundle, fileManager: fileManager) != nil
-            || (devSiblingSourceFilePath.flatMap { devSiblingScannerRoot(sourceFilePath: $0, fileManager: fileManager) } != nil)
+            || (devRepositorySourceFilePath.flatMap { devRepositoryScannerRoot(sourceFilePath: $0, fileManager: fileManager) } != nil)
     }
 
     public static func needsInAppSetup(
         settings: AppSettings,
         bundle: Bundle = .main,
-        devSiblingSourceFilePath: String? = nil,
+        devRepositorySourceFilePath: String? = nil,
         homeDirectory: URL? = nil,
         fileManager: FileManager = .default
     ) -> Bool {
@@ -206,7 +205,7 @@ public enum ScannerPaths {
         if hasRunnableScanner(
             settings: settings,
             bundle: bundle,
-            devSiblingSourceFilePath: devSiblingSourceFilePath,
+            devRepositorySourceFilePath: devRepositorySourceFilePath,
             homeDirectory: homeDirectory,
             fileManager: fileManager
         ) {
@@ -214,7 +213,7 @@ public enum ScannerPaths {
         }
         return canInstallScanner(
             bundle: bundle,
-            devSiblingSourceFilePath: devSiblingSourceFilePath,
+            devRepositorySourceFilePath: devRepositorySourceFilePath,
             fileManager: fileManager
         )
     }

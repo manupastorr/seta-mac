@@ -946,9 +946,9 @@ func scannerPathsChecks() throws {
         "in-app setup not needed when configured scanner is ready"
     )
 
-    let devSibling = tempRoot.appendingPathComponent("seta", isDirectory: true)
-    try fileManager.createDirectory(at: devSibling, withIntermediateDirectories: true)
-    fileManager.createFile(atPath: devSibling.appendingPathComponent("scan_library.py").path, contents: Data())
+    let devRepositoryScanner = tempRoot.appendingPathComponent("seta-mac/Scanner", isDirectory: true)
+    try fileManager.createDirectory(at: devRepositoryScanner, withIntermediateDirectories: true)
+    fileManager.createFile(atPath: devRepositoryScanner.appendingPathComponent("scan_library.py").path, contents: Data())
     let devSourceFile = tempRoot
         .appendingPathComponent("seta-mac/Sources/SetaMacApp/SetaMacApp.swift", isDirectory: false)
     try fileManager.createDirectory(at: devSourceFile.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -956,7 +956,7 @@ func scannerPathsChecks() throws {
     check(
         ScannerPaths.needsInAppSetup(
             settings: fallbackSettings,
-            devSiblingSourceFilePath: devSourceFile.path,
+            devRepositorySourceFilePath: devSourceFile.path,
             homeDirectory: homeOverride,
             fileManager: fileManager
         ),

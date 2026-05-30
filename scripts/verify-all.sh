@@ -2,7 +2,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SETA_ROOT="$(cd "$ROOT/../seta" && pwd)"
+SCANNER_ROOT="$ROOT/Scanner"
+SCANNER_PYTHON="${SCANNER_PYTHON:-$SCANNER_ROOT/.venv/bin/python}"
 SWIFT_BUILD_FLAGS_ARRAY=()
 if [[ -n "${SWIFT_BUILD_FLAGS:-}" ]]; then
   read -r -a SWIFT_BUILD_FLAGS_ARRAY <<< "$SWIFT_BUILD_FLAGS"
@@ -31,12 +32,13 @@ test ! -f "$SCANNER/scan-progress.json"
 test ! -d "$SCANNER/tests"
 echo "Bundled scanner files OK in $APP_BUNDLE"
 
-echo "== Python tests (seta) =="
-cd "$SETA_ROOT"
-.venv/bin/python -m unittest discover -s tests -v
-
-echo "== Node tests (seta) =="
-node --test tests/test_playback.mjs tests/test_draft.mjs tests/test_mix_links.mjs tests/test_render_safe.mjs
+echo "== Python scanner tests =="
+if [[ ! -x "$SCANNER_PYTHON" ]]; then
+  echo "Scanner Python not found at $SCANNER_PYTHON"
+  echo "Create it with: python3 -m venv Scanner/.venv && Scanner/.venv/bin/pip install -r Scanner/requirements.txt"
+  exit 1
+fi
+PYTHONPATH="$SCANNER_ROOT" "$SCANNER_PYTHON" -m unittest discover -s "$SCANNER_ROOT/tests" -v
 
 echo
 echo "All automated verification passed."

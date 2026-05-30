@@ -27,3 +27,9 @@ More detail: **[docs/DOWNLOAD.md](docs/DOWNLOAD.md)**
 - During a scan, SetaMac shows analyzed tracks as partial results; the completed `library.json` is written at the end.
 - Manual BPM/key/energy overrides stay in local app settings.
 - Removing a folder or track inside SetaMac does not delete audio files.
+
+## Development
+
+- Swift app code lives in `Sources/`.
+- The production Python scanner lives in `Scanner/` and is bundled directly into releases.
+- Generated scanner files such as `library.json`, `cache.json`, and `scan-progress.json` stay local and are not bundled.

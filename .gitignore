@@ -6,3 +6,11 @@ dist/*.zip
 *.xcodeproj/
 xcuserdata/
 
+# Generated scanner state
+Scanner/.venv/
+Scanner/__pycache__/
+Scanner/tests/__pycache__/
+Scanner/library.json
+Scanner/cache.json
+Scanner/scan-progress.json
+Scanner/scan.log

@@ -306,27 +306,27 @@ extension LibraryStore {
     }
 
     private var devScannerSourceFilePath: String? {
-        SetaMacDevSupport.devSiblingSourceFilePath(from: #filePath)
+        SetaMacDevSupport.devRepositorySourceFilePath(from: #filePath)
     }
 
     var scannerRootURL: URL? {
         ScannerPaths.preferredScannerRoot(
             settings: settings,
-            devSiblingSourceFilePath: devScannerSourceFilePath
+            devRepositorySourceFilePath: devScannerSourceFilePath
         )
     }
 
     var needsScannerSetup: Bool {
         ScannerPaths.needsInAppSetup(
             settings: settings,
-            devSiblingSourceFilePath: devScannerSourceFilePath
+            devRepositorySourceFilePath: devScannerSourceFilePath
         )
     }
 
     var scannerInstallSourceURL: URL? {
         ScannerPaths.bundledScannerRoot()
             ?? devScannerSourceFilePath.flatMap {
-                ScannerPaths.devSiblingScannerRoot(sourceFilePath: $0)
+                ScannerPaths.devRepositoryScannerRoot(sourceFilePath: $0)
             }
     }
 
@@ -434,7 +434,7 @@ extension LibraryStore {
         }
         let candidates = AppSettings.defaultLibraryCandidates(
             settings: settings,
-            devSiblingSourceFilePath: devScannerSourceFilePath
+            devRepositorySourceFilePath: devScannerSourceFilePath
         )
         for url in candidates where FileManager.default.fileExists(atPath: url.path) {
             load(url: url, remember: false)

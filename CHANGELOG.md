@@ -4,6 +4,7 @@
 
 - Show scanned tracks on the map in batches while **Rescan library** continues in the background.
 - Add a disposable `scan-progress.json` handoff so first scans no longer look empty until completion.
+- Move the production scanner source into `seta-mac/Scanner` so app releases no longer depend on a sibling `seta` checkout.
 - Keep partial scan results out of release bundles and in-app scanner refreshes.
 - Extend scanner/app tests for partial library contracts, progress parsing, and packaging exclusions.
 

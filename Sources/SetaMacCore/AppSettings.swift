@@ -59,12 +59,12 @@ public struct AppSettings: Codable, Equatable {
     public static func defaultLibraryCandidates(
         settings: AppSettings? = nil,
         bundle: Bundle = .main,
-        devSiblingSourceFilePath: String? = nil
+        devRepositorySourceFilePath: String? = nil
     ) -> [URL] {
         ScannerPaths.defaultLibraryCandidates(
             settings: settings ?? load(),
             bundle: bundle,
-            devSiblingSourceFilePath: devSiblingSourceFilePath
+            devRepositorySourceFilePath: devRepositorySourceFilePath
         )
     }
 }
