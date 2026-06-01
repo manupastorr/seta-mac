@@ -33,3 +33,11 @@ More detail: **[docs/DOWNLOAD.md](docs/DOWNLOAD.md)**
 - Swift app code lives in `Sources/`.
 - The production Python scanner lives in `Scanner/` and is bundled directly into releases.
 - Generated scanner files such as `library.json`, `cache.json`, and `scan-progress.json` stay local and are not bundled.
+
+## Architecture direction
+
+Seta may move to a light monorepo later, with `apps/mac`, `apps/landing`, and an archived or legacy web app.
+
+Do not migrate yet. The active macOS app is still small and already has useful boundaries between `SetaMacCore`, `SetaMacApp`, `SetaMacChecks`, and the bundled `Scanner`.
+
+Migration trigger: move only when cross-repo release work, shared documentation, shared scanner logic, or repeated multi-repo changes become a real cost.
