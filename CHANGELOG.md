@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.10
+
+- Add system-matched dark mode for the macOS app.
+- Update adaptive theme colors for panels, popovers, rows, map chrome, docks, and controls.
+
 ## 0.3.9
 
 - Show scanned tracks on the map in batches while **Rescan library** continues in the background.
