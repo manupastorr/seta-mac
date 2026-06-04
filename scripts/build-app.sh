@@ -16,7 +16,11 @@ SWIFT_BUILD_FLAGS_ARRAY=()
 if [[ -n "${SWIFT_BUILD_FLAGS:-}" ]]; then
   read -r -a SWIFT_BUILD_FLAGS_ARRAY <<< "$SWIFT_BUILD_FLAGS"
 fi
-swift build "${SWIFT_BUILD_FLAGS_ARRAY[@]}" -c release --product "$PRODUCT"
+if ((${#SWIFT_BUILD_FLAGS_ARRAY[@]})); then
+  swift build "${SWIFT_BUILD_FLAGS_ARRAY[@]}" -c release --product "$PRODUCT"
+else
+  swift build -c release --product "$PRODUCT"
+fi
 
 echo "Packaging $APP_DIR..."
 rm -rf "$APP_DIR"

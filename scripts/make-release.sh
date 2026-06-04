@@ -23,4 +23,4 @@ cp "$ROOT/LICENSE" "$ROOT/VERSION" "$STAGE/"
 )
 
 echo "Release zip: $ROOT/dist/$ZIP_NAME"
-echo "Upload: gh release create v${VERSION} dist/${ZIP_NAME} --title \"SetaMac ${VERSION}\" --notes-file CHANGELOG.md"
+echo "Upload: ./scripts/release-github.sh"

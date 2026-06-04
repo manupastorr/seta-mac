@@ -33,6 +33,7 @@ More detail: **[docs/DOWNLOAD.md](docs/DOWNLOAD.md)**
 - Swift app code lives in `Sources/`.
 - The production Python scanner lives in `Scanner/` and is bundled directly into releases.
 - Generated scanner files such as `library.json`, `cache.json`, and `scan-progress.json` stay local and are not bundled.
+- Release convention: bump `VERSION`, add a matching `CHANGELOG.md` section, commit those metadata updates, then run `./scripts/release-github.sh`.
 
 ## Architecture direction
 

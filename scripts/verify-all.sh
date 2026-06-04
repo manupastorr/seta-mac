@@ -11,10 +11,18 @@ fi
 
 echo "== SetaMac checks =="
 cd "$ROOT"
-swift run "${SWIFT_BUILD_FLAGS_ARRAY[@]}" SetaMacChecks
+if ((${#SWIFT_BUILD_FLAGS_ARRAY[@]})); then
+  swift run "${SWIFT_BUILD_FLAGS_ARRAY[@]}" SetaMacChecks
+else
+  swift run SetaMacChecks
+fi
 
 echo "== SetaMac release build =="
-swift build "${SWIFT_BUILD_FLAGS_ARRAY[@]}" -c release --product SetaMac
+if ((${#SWIFT_BUILD_FLAGS_ARRAY[@]})); then
+  swift build "${SWIFT_BUILD_FLAGS_ARRAY[@]}" -c release --product SetaMac
+else
+  swift build -c release --product SetaMac
+fi
 
 echo "== SetaMac app bundle =="
 ./scripts/build-app.sh
