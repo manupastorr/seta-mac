@@ -433,7 +433,7 @@ struct TrackMapView: View {
             path.move(to: CGPoint(x: 0, y: y))
             path.addLine(to: CGPoint(x: layout.plotWidth, y: y))
         }
-        context.stroke(path, with: .color(.black.opacity(0.04)), lineWidth: 0.5)
+        context.stroke(path, with: .color(SetaTheme.panelBorder.opacity(0.45)), lineWidth: 0.5)
     }
 
     private func drawSetMoments(context: inout GraphicsContext, layout: MapPlotLayout) {
@@ -460,7 +460,7 @@ struct TrackMapView: View {
             context.draw(
                 Text(moment.label)
                     .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(Color(hex: "#1e1e2d").opacity(0.32 * labelOpacity)),
+                    .foregroundStyle(SetaTheme.muted.opacity(0.48 * labelOpacity)),
                 at: CGPoint(x: ellipse.cx, y: labelY),
                 anchor: .center
             )
@@ -544,7 +544,7 @@ struct TrackMapView: View {
         context.fill(Path(ellipseIn: rect), with: .color(color))
         context.stroke(
             Path(ellipseIn: rect),
-            with: .color(zoomHighlight ? SetaTheme.accent.opacity(0.35) : .black.opacity(0.12)),
+            with: .color(zoomHighlight ? SetaTheme.accent.opacity(0.35) : SetaTheme.panelBorder.opacity(0.65)),
             lineWidth: zoomHighlight ? 1 : 0.5
         )
 

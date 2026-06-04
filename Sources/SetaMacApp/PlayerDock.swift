@@ -69,9 +69,9 @@ struct PlayerDock: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 7)
-            .background(Color.white.opacity(0.75))
+            .background(SetaTheme.neutralOverlay.opacity(0.75))
             .background(.ultraThinMaterial)
-            .shadow(color: .black.opacity(0.06), radius: 24, y: -6)
+            .shadow(color: SetaTheme.shadow.opacity(0.12), radius: 24, y: -6)
         }
     }
 
@@ -126,7 +126,7 @@ struct WaveformView: View {
                     }
             )
         }
-        .background(track == nil ? Color.black.opacity(0.04) : SetaTheme.panel)
+        .background(track == nil ? SetaTheme.panel.opacity(0.65) : SetaTheme.panel)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay {
             RoundedRectangle(cornerRadius: 8).strokeBorder(SetaTheme.panelBorder.opacity(0.8))

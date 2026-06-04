@@ -158,7 +158,7 @@ private struct RekordboxImportRow: View {
         if isSelected {
             return SetaTheme.accentSoft
         }
-        return isHovered ? Color.white.opacity(0.75) : Color.white.opacity(0.45)
+        return isHovered ? SetaTheme.panelElevated.opacity(0.75) : SetaTheme.panelElevated.opacity(0.45)
     }
 
     private var summary: String {

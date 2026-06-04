@@ -17,7 +17,7 @@ struct TrackListRowAppearance {
         if isQueueFocus {
             return SetaTheme.accent.opacity(0.08)
         }
-        return isHovered ? Color.white.opacity(0.92) : Color.white.opacity(0.55)
+        return isHovered ? SetaTheme.panelElevated.opacity(0.92) : SetaTheme.panelElevated.opacity(0.55)
     }
 
     var border: Color {

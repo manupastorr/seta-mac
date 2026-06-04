@@ -26,7 +26,7 @@ struct CamelotWheelView: View {
                 context.fill(Path(path), with: .color(color))
                 context.stroke(
                     Path(path),
-                    with: .color(active ? SetaTheme.accent : Color.black.opacity(0.12)),
+                    with: .color(active ? SetaTheme.accent : SetaTheme.panelBorder.opacity(0.8)),
                     lineWidth: active ? 1.35 : 0.45
                 )
             }

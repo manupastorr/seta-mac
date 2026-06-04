@@ -223,7 +223,7 @@ private struct LibraryFolderRow: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
-        .background(isHovered ? Color.white.opacity(0.9) : Color.white.opacity(0.65))
+        .background(isHovered ? SetaTheme.panelElevated.opacity(0.9) : SetaTheme.panelElevated.opacity(0.65))
         .overlay {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .strokeBorder(SetaTheme.panelBorder.opacity(isHovered ? 1 : 0.7))

@@ -73,7 +73,7 @@ struct TrackBadgesView: View {
         case .vocals:
             return Color(hex: "#7a3f95").opacity(0.12)
         case .instrumental:
-            return Color.black.opacity(0.05)
+            return SetaTheme.panel
         case .vocalsUnclear:
             return Color(hex: "#d48806").opacity(0.1)
         default:
@@ -89,7 +89,7 @@ struct TrackBadgesView: View {
         case .vocals:
             return Color(hex: "#7a3f95").opacity(0.24)
         case .instrumental:
-            return Color.black.opacity(0.1)
+            return SetaTheme.panelBorder
         case .vocalsUnclear:
             return Color(hex: "#d48806").opacity(0.24)
         default:
@@ -134,13 +134,13 @@ struct TrackTooltipView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .frame(width: 236, alignment: .leading)
-        .background(.white.opacity(0.98))
+        .background(SetaTheme.panelElevated.opacity(0.98))
         .overlay {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(SetaTheme.panelBorder)
         }
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .shadow(color: .black.opacity(0.1), radius: 16, y: 4)
+        .shadow(color: SetaTheme.shadow.opacity(0.16), radius: 16, y: 4)
     }
 }
 
@@ -170,7 +170,7 @@ struct DraftEnergyRampView: View {
             }
         }
         .frame(height: 36)
-        .background(Color.black.opacity(0.03))
+        .background(SetaTheme.panel.opacity(0.65))
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
@@ -189,7 +189,7 @@ struct MapLoupeView: View {
     var body: some View {
         Canvas { context, size in
             let center = CGPoint(x: size.width / 2, y: size.height / 2)
-            context.fill(Path(ellipseIn: CGRect(origin: .zero, size: size)), with: .color(.white))
+            context.fill(Path(ellipseIn: CGRect(origin: .zero, size: size)), with: .color(SetaTheme.panelElevated))
             context.stroke(Path(ellipseIn: CGRect(origin: .zero, size: size)), with: .color(SetaTheme.panelBorder), lineWidth: 1)
 
             let anchor = layout.trackPoint(for: track, displayPositions: displayPositions)
@@ -220,6 +220,6 @@ struct MapLoupeView: View {
         .frame(width: loupeSize, height: loupeSize)
         .clipShape(Circle())
         .overlay { Circle().strokeBorder(SetaTheme.panelBorder) }
-        .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
+        .shadow(color: SetaTheme.shadow.opacity(0.16), radius: 10, y: 4)
     }
 }

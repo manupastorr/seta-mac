@@ -28,7 +28,7 @@ struct BpmRangeControl: View {
                     let width = proxy.size.width
                     ZStack(alignment: .leading) {
                         Capsule()
-                            .fill(Color.black.opacity(0.12))
+                            .fill(SetaTheme.panelBorder.opacity(0.7))
                             .frame(height: 4)
                             .padding(.horizontal, 8)
 
@@ -80,8 +80,8 @@ struct BpmRangeControl: View {
         Circle()
             .fill(SetaTheme.accent)
             .frame(width: 16, height: 16)
-            .overlay { Circle().strokeBorder(.white, lineWidth: 2) }
-            .shadow(color: .black.opacity(0.18), radius: 1.5, y: 1)
+            .overlay { Circle().strokeBorder(SetaTheme.panelElevated, lineWidth: 2) }
+            .shadow(color: SetaTheme.shadow.opacity(0.18), radius: 1.5, y: 1)
             .offset(x: x - 8)
             .gesture(DragGesture(minimumDistance: 0).onChanged(onDrag))
     }

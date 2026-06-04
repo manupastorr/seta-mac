@@ -249,14 +249,14 @@ struct SearchResultsPopover: View {
         }
         .padding(4)
         .frame(minWidth: 280)
-        .background(.white.opacity(0.98))
+        .background(SetaTheme.panelElevated.opacity(0.98))
         .background(.ultraThinMaterial)
         .overlay {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(SetaTheme.panelBorder)
         }
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .shadow(color: .black.opacity(0.12), radius: 14, y: 8)
+        .shadow(color: SetaTheme.shadow.opacity(0.18), radius: 14, y: 8)
     }
 }
 

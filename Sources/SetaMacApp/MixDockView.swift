@@ -167,7 +167,7 @@ struct ManualTrackControls: View {
                 }
             }
             .padding(8)
-            .background(Color.white.opacity(0.55))
+            .background(SetaTheme.panelElevated.opacity(0.55))
             .overlay {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .strokeBorder(SetaTheme.panelBorder.opacity(0.8))
@@ -737,7 +737,7 @@ struct DraftTrackRow: View {
                     .tint(SetaTheme.accent)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 4)
-                    .background(Color.white.opacity(0.9))
+                    .background(SetaTheme.panelElevated.opacity(0.9))
                     .overlay {
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
                             .strokeBorder(SetaTheme.panelBorder)

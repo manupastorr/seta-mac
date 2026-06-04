@@ -197,7 +197,7 @@ struct StatusBanner: View {
                 .foregroundStyle(store.errorMessage == nil ? SetaTheme.muted : .orange)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .background(.white.opacity(0.92))
+                .background(SetaTheme.panelElevated.opacity(0.92))
                 .background(.ultraThinMaterial, in: Capsule())
                 .overlay { Capsule().strokeBorder(SetaTheme.panelBorder) }
                 .id(message)
@@ -390,10 +390,10 @@ struct NeighborModeCue: View {
             }
             .padding(.horizontal, 9)
             .padding(.vertical, 4)
-            .background(.white.opacity(0.78))
+            .background(SetaTheme.panelElevated.opacity(0.78))
             .background(.ultraThinMaterial, in: Capsule())
             .overlay { Capsule().strokeBorder(SetaTheme.panelBorder) }
-            .shadow(color: .black.opacity(0.06), radius: 10, y: 2)
+            .shadow(color: SetaTheme.shadow.opacity(0.1), radius: 10, y: 2)
         }
         .buttonStyle(.plain)
     }

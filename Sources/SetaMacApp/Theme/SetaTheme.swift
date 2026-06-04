@@ -1,15 +1,19 @@
+import AppKit
 import SwiftUI
 import SetaMacCore
 
 enum SetaTheme {
-    static let background = Color(hex: "#ffffff")
-    static let panel = Color(hex: "#f5f5f8")
-    static let panelBorder = Color(hex: "#e2e2ea")
-    static let text = Color(hex: "#1a1a24")
-    static let muted = Color(hex: "#6b6b80")
+    static let background = Color(light: "#ffffff", dark: "#111116")
+    static let panel = Color(light: "#f5f5f8", dark: "#202029")
+    static let panelElevated = Color(light: "#ffffff", dark: "#2a2a35")
+    static let panelBorder = Color(light: "#e2e2ea", dark: "#3a3a48")
+    static let text = Color(light: "#1a1a24", dark: "#f4f4f7")
+    static let muted = Color(light: "#6b6b80", dark: "#aaaabd")
     static let accent = Color(hex: "#6b4fd8")
     static let accentSoft = Color(hex: "#6b4fd8").opacity(0.12)
     static let draftGold = Color(hex: "#f5a623")
+    static let neutralOverlay = Color(light: "#ffffff", dark: "#252530")
+    static let shadow = Color.black
 
     static let minWindowWidth: CGFloat = 1280
     static let minWindowHeight: CGFloat = 760
@@ -37,13 +41,13 @@ struct GlassPanel<Content: View>: View {
             .padding(compact ? EdgeInsets(top: 5, leading: 8, bottom: 5, trailing: 8) : EdgeInsets(top: 10, leading: 8, bottom: 10, trailing: 8))
             .background {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(.white.opacity(0.75))
+                    .fill(SetaTheme.neutralOverlay.opacity(0.75))
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                             .strokeBorder(SetaTheme.panelBorder.opacity(0.75))
                     }
-                    .shadow(color: .black.opacity(compact ? 0.06 : 0.08), radius: compact ? 12 : 24, y: compact ? 2 : 4)
+                    .shadow(color: SetaTheme.shadow.opacity(compact ? 0.06 : 0.16), radius: compact ? 12 : 24, y: compact ? 2 : 4)
             }
     }
 }
@@ -58,7 +62,7 @@ struct SetaKbd: View {
             .foregroundStyle(SetaTheme.text)
             .padding(.horizontal, 4)
             .padding(.vertical, 1)
-            .background(.white.opacity(0.9))
+            .background(SetaTheme.panelElevated.opacity(0.9))
             .overlay {
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
                     .strokeBorder(active ? SetaTheme.accent.opacity(0.35) : SetaTheme.panelBorder)
@@ -204,14 +208,14 @@ struct FloatingChrome<Content: View>: View {
 
     var body: some View {
         content()
-            .background(.white.opacity(0.75))
+            .background(SetaTheme.neutralOverlay.opacity(0.75))
             .background(.ultraThinMaterial)
             .overlay(alignment: .bottom) {
                 Rectangle()
                     .fill(SetaTheme.panelBorder.opacity(0.75))
                     .frame(height: 1)
             }
-            .shadow(color: .black.opacity(0.04), radius: 0, y: 1)
+            .shadow(color: SetaTheme.shadow.opacity(0.08), radius: 0, y: 1)
     }
 }
 
@@ -303,6 +307,13 @@ struct SetaSheetSectionCard<Content: View>: View {
 }
 
 extension Color {
+    init(light: String, dark: String) {
+        self.init(nsColor: NSColor(name: nil) { appearance in
+            let bestMatch = appearance.bestMatch(from: [.darkAqua, .aqua])
+            return NSColor(hex: bestMatch == .darkAqua ? dark : light)
+        })
+    }
+
     init(hex: String) {
         let raw = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
         let rgbRaw: String
@@ -319,6 +330,26 @@ extension Color {
         let green = Double((value >> 8) & 0xff) / 255
         let blue = Double(value & 0xff) / 255
         self.init(red: red, green: green, blue: blue, opacity: alpha)
+    }
+}
+
+private extension NSColor {
+    convenience init(hex: String) {
+        let raw = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
+        let rgbRaw: String
+        let alpha: Double
+        if raw.count == 8 {
+            rgbRaw = String(raw.prefix(6))
+            alpha = Double(UInt8(String(raw.suffix(2)), radix: 16) ?? 255) / 255
+        } else {
+            rgbRaw = raw
+            alpha = 1
+        }
+        let value = UInt64(rgbRaw, radix: 16) ?? 0x555770
+        let red = CGFloat((value >> 16) & 0xff) / 255
+        let green = CGFloat((value >> 8) & 0xff) / 255
+        let blue = CGFloat(value & 0xff) / 255
+        self.init(red: red, green: green, blue: blue, alpha: CGFloat(alpha))
     }
 }
 
