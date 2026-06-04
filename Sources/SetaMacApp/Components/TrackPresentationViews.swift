@@ -146,9 +146,10 @@ struct TrackTooltipView: View {
 
 struct DraftEnergyRampView: View {
     let tracks: [SetaTrack]
+    var activeTrackID: String?
 
     var body: some View {
-        let geometry = EnergyRamp.geometry(tracks: tracks)
+        let geometry = EnergyRamp.geometry(tracks: tracks, pad: 6)
         GeometryReader { proxy in
             Canvas { context, size in
                 guard !geometry.points.isEmpty else { return }
@@ -162,10 +163,30 @@ struct DraftEnergyRampView: View {
                 context.stroke(path, with: .color(SetaTheme.accent), lineWidth: 1.5)
                 for point in geometry.points {
                     let scaled = CGPoint(x: point.x * scaleX, y: point.y * scaleY)
+                    let isActive = point.trackID == activeTrackID
+                    let radius: CGFloat = isActive ? 3.25 : 2
                     context.fill(
-                        Path(ellipseIn: CGRect(x: scaled.x - 2, y: scaled.y - 2, width: 4, height: 4)),
+                        Path(ellipseIn: CGRect(
+                            x: scaled.x - radius,
+                            y: scaled.y - radius,
+                            width: radius * 2,
+                            height: radius * 2
+                        )),
                         with: .color(SetaTheme.accent)
                     )
+                    if isActive {
+                        let ringRadius: CGFloat = 5
+                        context.stroke(
+                            Path(ellipseIn: CGRect(
+                                x: scaled.x - ringRadius,
+                                y: scaled.y - ringRadius,
+                                width: ringRadius * 2,
+                                height: ringRadius * 2
+                            )),
+                            with: .color(SetaTheme.accent.opacity(0.72)),
+                            lineWidth: 1.5
+                        )
+                    }
                 }
             }
         }

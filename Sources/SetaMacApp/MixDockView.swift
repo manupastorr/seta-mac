@@ -305,7 +305,7 @@ struct DraftPane: View {
             draftSortControls
             draftActions
             if !store.draftTracks.isEmpty {
-                DraftEnergyRampView(tracks: store.draftTracks)
+                DraftEnergyRampView(tracks: store.draftTracks, activeTrackID: store.playingTrackID ?? store.selectedTrackID)
             }
             if !store.draftWeakLinks.isEmpty {
                 DraftWeakLinksView(store: store)

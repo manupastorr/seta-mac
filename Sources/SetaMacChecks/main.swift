@@ -532,6 +532,7 @@ func uiGeometryChecks() throws {
 
     let ramp = EnergyRamp.geometry(tracks: library.tracks)
     check(ramp.points.count == 2, "energy ramp points")
+    check(ramp.points.map(\.trackID) == library.tracks.map(\.id), "energy ramp points keep track ids")
     check(ramp.path.hasPrefix("M"), "energy ramp path")
 
     let badges = TrackPresentation.badges(for: track)
