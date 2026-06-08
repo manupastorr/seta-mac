@@ -7,6 +7,7 @@ public struct LibraryFilter: Equatable {
     public var bpmMax: Double
     public var keys: Set<String>
     public var moments: Set<String>
+    public var roles: Set<TrackRole>
     public var genre: String
     public var draftOnly: Bool
 
@@ -17,6 +18,7 @@ public struct LibraryFilter: Equatable {
         bpmMax: Double = 180,
         keys: Set<String> = [],
         moments: Set<String> = [],
+        roles: Set<TrackRole> = [],
         genre: String = "all",
         draftOnly: Bool = false
     ) {
@@ -26,14 +28,25 @@ public struct LibraryFilter: Equatable {
         self.bpmMax = bpmMax
         self.keys = keys
         self.moments = moments
+        self.roles = roles
         self.genre = genre
         self.draftOnly = draftOnly
     }
 
-    public func matches(_ track: SetaTrack, draftTrackIds: Set<String> = []) -> Bool {
+    public func matches(
+        _ track: SetaTrack,
+        draftTrackIds: Set<String> = [],
+        trackRoles: [String: Set<TrackRole>] = [:]
+    ) -> Bool {
         if draftOnly, !draftTrackIds.contains(track.id) { return false }
         if !sources.contains(track.source) { return false }
         if !SetMoments.matchesAnyActiveMoments(track, activeMomentIDs: moments) { return false }
+        if !roles.isEmpty {
+            guard let assignedRoles = trackRoles[track.id],
+                  !assignedRoles.isDisjoint(with: roles) else {
+                return false
+            }
+        }
         if genre != "all" {
             let matchesGenre = track.genre == genre || track.batch == genre
             if !matchesGenre { return false }
@@ -62,8 +75,13 @@ public struct LibraryFilter: Equatable {
 }
 
 public extension SetaLibrary {
-    func filteredTracks(using filter: LibraryFilter, draftTrackIds: Set<String> = []) -> [SetaTrack] {
-        tracks.filter { filter.matches($0, draftTrackIds: draftTrackIds) }
+    func filteredTracks(
+        using filter: LibraryFilter,
+        draftTrackIds: Set<String> = [],
+        trackRoles: [String: Set<TrackRole>] = [:]
+    ) -> [SetaTrack] {
+        tracks.filter {
+            filter.matches($0, draftTrackIds: draftTrackIds, trackRoles: trackRoles)
+        }
     }
 }
-

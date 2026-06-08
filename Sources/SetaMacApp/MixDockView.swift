@@ -94,6 +94,8 @@ struct ManualTrackControls: View {
     var body: some View {
         if let track = store.selectedTrack {
             VStack(alignment: .leading, spacing: 8) {
+                TrackRoleControls(store: store, trackID: track.id)
+
                 ManualOverrideRow(
                     title: "BPM",
                     valueText: track.bpm.map { "\(Int($0.rounded()))" } ?? "?",
@@ -173,6 +175,29 @@ struct ManualTrackControls: View {
                     .strokeBorder(SetaTheme.panelBorder.opacity(0.8))
             }
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+    }
+}
+
+private struct TrackRoleControls: View {
+    @ObservedObject var store: LibraryStore
+    let trackID: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("Roles")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(SetaTheme.muted)
+            HStack(spacing: 5) {
+                ForEach(TrackRole.allCases, id: \.self) { role in
+                    SetaChip(
+                        title: role.label,
+                        isActive: store.roles(for: trackID).contains(role)
+                    ) {
+                        store.toggleRole(role, for: trackID)
+                    }
+                }
+            }
         }
     }
 }

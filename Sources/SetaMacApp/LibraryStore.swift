@@ -37,6 +37,7 @@ final class LibraryStore: ObservableObject {
     @Published var queueFocusIndex = -1
     @Published var searchResultsIndex = -1
     @Published var trackOverrides: [String: TrackOverride] = [:]
+    @Published var trackRoles: [String: Set<TrackRole>] = TrackRolesStorage.load()
     @Published var transitionFeedback: [String: TransitionFeedback] = TransitionFeedbackStorage.load()
     @Published var bridgeRoutes: [SmartBridgeRoute] = []
     @Published var draftWeakLinks: [DraftWeakLink] = []
@@ -68,6 +69,7 @@ final class LibraryStore: ObservableObject {
     private var smartNeighborCacheSignature = ""
     private var smartNeighborCache: [SmartNeighbor] = []
     private var smartNeighborRevision = 0
+    private var trackRoleRevision = 0
     private var libraryRevision = 0
     private var tracksByIDCacheRevision = -1
     private var tracksByIDCache: [String: SetaTrack] = [:]
@@ -79,6 +81,7 @@ final class LibraryStore: ObservableObject {
 
     private struct FilteredTracksCacheKey: Equatable {
         let libraryRevision: Int
+        let trackRoleRevision: Int
         let filter: LibraryFilter
         let draftTrackIDs: [String]
     }
@@ -120,6 +123,7 @@ final class LibraryStore: ObservableObject {
     var filteredTracks: [SetaTrack] {
         let key = FilteredTracksCacheKey(
             libraryRevision: libraryRevision,
+            trackRoleRevision: trackRoleRevision,
             filter: filter,
             draftTrackIDs: draft.trackIds
         )
@@ -128,7 +132,8 @@ final class LibraryStore: ObservableObject {
         }
         let tracks = library?.filteredTracks(
             using: filter,
-            draftTrackIds: Set(draft.trackIds)
+            draftTrackIds: Set(draft.trackIds),
+            trackRoles: trackRoles
         ) ?? []
         filteredTracksCacheKey = key
         filteredTracksCache = tracks
@@ -781,6 +786,20 @@ extension LibraryStore {
         syncPlayQueue()
     }
 
+    func toggleRoleFilter(_ role: TrackRole) {
+        if filter.roles.contains(role) {
+            filter.roles.remove(role)
+        } else {
+            filter.roles.insert(role)
+        }
+        syncPlayQueue()
+    }
+
+    func clearRoleFilter() {
+        filter.roles.removeAll()
+        syncPlayQueue()
+    }
+
     func toggleNeighborMode() {
         highlightNeighbors.toggle()
         if highlightNeighbors {
@@ -1026,6 +1045,32 @@ extension LibraryStore {
     func setDraftNote(_ note: String, for trackId: String) {
         draft.setNote(note, for: trackId)
         persistDraftSoon()
+    }
+
+    // MARK: - Track roles
+
+    func roles(for trackId: String) -> Set<TrackRole> {
+        trackRoles[trackId] ?? []
+    }
+
+    func toggleRole(_ role: TrackRole, for trackId: String) {
+        var roles = trackRoles[trackId] ?? []
+        if roles.contains(role) {
+            roles.remove(role)
+        } else {
+            roles.insert(role)
+        }
+
+        if roles.isEmpty {
+            trackRoles.removeValue(forKey: trackId)
+        } else {
+            trackRoles[trackId] = roles
+        }
+        TrackRolesStorage.save(trackRoles)
+        trackRoleRevision += 1
+        filteredTracksCacheKey = nil
+        invalidateSmartNeighborCache()
+        syncPlayQueue()
     }
 
     // MARK: - Smart journey actions

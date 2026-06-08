@@ -25,6 +25,7 @@ struct FilterBarView: View {
                         searchField
                         sourceChips
                         genrePicker
+                        roleFilter
                         bpmControls
                         mapControls
                     }
@@ -189,6 +190,48 @@ struct FilterBarView: View {
                 .strokeBorder(SetaTheme.panelBorder)
         }
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private var roleFilter: some View {
+        Menu {
+            ForEach(TrackRole.allCases, id: \.self) { role in
+                Button {
+                    store.toggleRoleFilter(role)
+                } label: {
+                    Label(
+                        role.label,
+                        systemImage: store.filter.roles.contains(role) ? "checkmark" : roleSystemImage(role)
+                    )
+                }
+            }
+            if !store.filter.roles.isEmpty {
+                Divider()
+                Button("Clear role filter") {
+                    store.clearRoleFilter()
+                }
+            }
+        } label: {
+            if compact {
+                Image(systemName: store.filter.roles.isEmpty ? "tag" : "tag.fill")
+            } else {
+                Label(
+                    store.filter.roles.isEmpty ? "Roles" : "Roles \(store.filter.roles.count)",
+                    systemImage: store.filter.roles.isEmpty ? "tag" : "tag.fill"
+                )
+            }
+        }
+        .menuStyle(.borderlessButton)
+        .foregroundStyle(store.filter.roles.isEmpty ? SetaTheme.muted : SetaTheme.accent)
+        .help("Filter by saved track role")
+        .fixedSize()
+    }
+
+    private func roleSystemImage(_ role: TrackRole) -> String {
+        switch role {
+        case .intro: return "sparkles"
+        case .opener: return "play.fill"
+        case .closer: return "flag.checkered"
+        }
     }
 
     private var bpmControls: some View {

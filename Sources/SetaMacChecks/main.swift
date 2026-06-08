@@ -217,6 +217,16 @@ func filterAndDraftHelpers() throws {
     )
     check(draftOnly.map(\.id) == ["high"], "draft-only filter")
 
+    let roleFiltered = library.filteredTracks(
+        using: LibraryFilter(roles: [.intro, .closer]),
+        trackRoles: [
+            "low": [.intro],
+            "mid": [.opener],
+            "high": [.closer]
+        ]
+    )
+    check(roleFiltered.map(\.id) == ["low", "high"], "track role filter matches any active role")
+
     var draft = SetaDraft()
     draft.add(trackId: "high")
     draft.add(trackId: "low")
@@ -747,6 +757,22 @@ func trackOverrideHelpers() throws {
     check(afterClearBpm.key == "8A", "base key unchanged when only energy overridden")
 }
 
+func trackRoleStorageHelpers() {
+    let defaults = UserDefaults(suiteName: "seta-track-roles-check")!
+    defaults.removePersistentDomain(forName: "seta-track-roles-check")
+
+    TrackRolesStorage.save([
+        "intro-track": [.intro, .opener],
+        "closer-track": [.closer],
+        "empty-track": []
+    ], to: defaults)
+
+    let loaded = TrackRolesStorage.load(from: defaults)
+    check(loaded["intro-track"] == [.intro, .opener], "track roles roundtrip")
+    check(loaded["closer-track"] == [.closer], "single track role roundtrips")
+    check(loaded["empty-track"] == nil, "empty track roles are pruned")
+}
+
 func smartJourneyChecks() throws {
     let json = """
     {
@@ -1175,6 +1201,7 @@ do {
     try uiGeometryChecks()
     try rekordboxPlaylistImport()
     try trackOverrideHelpers()
+    trackRoleStorageHelpers()
     try smartJourneyChecks()
     try scannerPathsChecks()
     try scannerInstallerChecks()
