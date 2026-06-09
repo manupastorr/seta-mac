@@ -21,24 +21,34 @@ Start from a seed track, explore smart candidates and bridge routes, repair weak
 
 More detail: **[docs/DOWNLOAD.md](docs/DOWNLOAD.md)**
 
-## Notes
+## Why this exists
+
+SetaMac is a personal project for exploring local-first music workflow tooling. It is built as a practical desktop tool, not a SaaS product.
+
+Technically, it combines a Swift macOS app, a bundled Python scanner, music-library analysis, Rekordbox export/import support, and a small release packaging and validation flow.
+
+## Usage notes
 
 - Bundled scanner analyzes folders you choose; SetaMac does not move or rename your files.
 - During a scan, SetaMac shows analyzed tracks as partial results; the completed `library.json` is written at the end.
 - Manual BPM/key/energy overrides stay in local app settings.
 - Removing a folder or track inside SetaMac does not delete audio files.
 
+## Technical overview
+
+- `Sources/SetaMacCore` contains domain logic, library models, scoring, drafts, scanner setup, and Rekordbox import/export support.
+- `Sources/SetaMacApp` contains the macOS UI.
+- `Sources/SetaMacChecks` contains smoke and validation checks for the app core.
+- `Scanner/` contains the production Python audio/library scanner bundled into app releases.
+- `scripts/verify-all.sh` is the main local verification command. It builds Swift targets, packages the app, checks the bundled scanner contents, and runs scanner unit tests.
+- Generated scanner state such as `Scanner/library.json`, `Scanner/cache.json`, `Scanner/scan-progress.json`, and `Scanner/scan.log` is ignored and is not bundled.
+
 ## Development
 
-- Swift app code lives in `Sources/`.
-- The production Python scanner lives in `Scanner/` and is bundled directly into releases.
-- Generated scanner files such as `library.json`, `cache.json`, and `scan-progress.json` stay local and are not bundled.
-- Release convention: bump `VERSION`, add a matching `CHANGELOG.md` section, commit those metadata updates, then run `./scripts/release-github.sh`.
+```bash
+swift build
+swift run SetaMacChecks
+./scripts/verify-all.sh
+```
 
-## Architecture direction
-
-Seta may move to a light monorepo later, with `apps/mac`, `apps/landing`, and an archived or legacy web app.
-
-Do not migrate yet. The active macOS app is still small and already has useful boundaries between `SetaMacCore`, `SetaMacApp`, `SetaMacChecks`, and the bundled `Scanner`.
-
-Migration trigger: move only when cross-repo release work, shared documentation, shared scanner logic, or repeated multi-repo changes become a real cost.
+Release convention: bump `VERSION`, add a matching `CHANGELOG.md` section, commit those metadata updates, then run `./scripts/release-github.sh`.
