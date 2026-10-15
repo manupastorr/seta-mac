@@ -1,47 +1,55 @@
-# SetaMac
+# SetaMac 🍄
 
-Local-first macOS app for building DJ set drafts from a map of your library.
+**Draft a DJ set from a map of your own library.** A local-first macOS app: every track sits on a BPM × intensity map, you pick a seed track, and SetaMac shows what mixes well next and why. When the journey feels right, export it to Rekordbox.
 
-Start from a seed track, explore smart candidates and bridge routes, repair weak links, then export the draft to Rekordbox or another DJ tool. Seta keeps the early creative phase map-first, so you can shape a set journey before committing to a fixed playlist order.
+[![CI](https://github.com/manupastorr/seta-mac/actions/workflows/ci.yml/badge.svg)](https://github.com/manupastorr/seta-mac/actions/workflows/ci.yml)
+![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black)
+![Swift](https://img.shields.io/badge/Swift-UI-orange)
+![Python](https://img.shields.io/badge/Python-scanner-blue)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**[Download & install](docs/DOWNLOAD.md)** · [Releases](https://github.com/manupastorr/seta-mac/releases) · License: [MIT](LICENSE)
+**[Download the latest release](https://github.com/manupastorr/seta-mac/releases/latest)** · [Install guide](docs/DOWNLOAD.md) · [Changelog](CHANGELOG.md)
 
-![SetaMac demo](docs/media/setamac-demo.gif)
+![SetaMac demo: exploring the map, picking a seed track and building a set](docs/media/setamac-demo.gif)
 
-## Quick install
+## Why
 
-1. Download `SetaMac-0.3.10-macos14.zip` from [Releases](https://github.com/manupastorr/seta-mac/releases).
+The hard part of a set is not finding tracks, it is the story between them. Playlists force an order too early. SetaMac keeps the first, creative phase on a map: you see your whole library by tempo and energy, follow smooth mixes from one track to the next, and only fix the order when the journey makes sense.
+
+## What it does
+
+| | |
+|---|---|
+| **Library map** | Every track on a BPM × intensity map, colored by Camelot key, with set zones (warm up, groove, peak, closing) in the background. |
+| **Mix candidates** | Pick a track and see ranked next tracks: same or compatible key, small BPM steps, energy lift, intro/outro fit. Each candidate says *why*. |
+| **Set draft** | Add tracks, repair weak links, shape the energy ramp. |
+| **Rekordbox in and out** | Import playlists from Rekordbox, export the draft back as a playlist. |
+| **Local analysis** | A bundled Python scanner reads BPM, key, intensity, vocals and waveforms from the folders you choose. Your files never move and never leave your Mac. |
+| **No Terminal** | First launch runs a one-click setup. Tracks appear on the map in batches while the scan continues. |
+
+![Mix candidates: a seed track, its best next tracks and the reasons for each](docs/screenshots/02-mix-candidates.png)
+
+## Install
+
+1. Download the latest `SetaMac-*.zip` from [Releases](https://github.com/manupastorr/seta-mac/releases/latest).
 2. Unzip it and move **SetaMac.app** to Applications.
-3. **Open it:** right-click **SetaMac.app** → **Open** → **Open**.  
-   macOS says **“damaged”**? Click **Cancel**, then follow [these steps](docs/DOWNLOAD.md#if-macos-blocks-the-app) (one Terminal line).
-4. **In the app:** click **Start setup** and wait (internet once).
-5. Add music folders in **Library → Library Folders…**, then click **Rescan library**. Tracks appear in batches while analysis continues.
+3. Right-click **SetaMac.app** → **Open** → **Open**. If macOS says the app is "damaged", follow [these steps](docs/DOWNLOAD.md#if-macos-blocks-the-app).
+4. In the app, click **Start setup** and wait (needs internet once).
+5. Add your music folders in **Library → Library Folders…**, then **Rescan library**.
 
-![SetaMac map-first set journey view](docs/screenshots/01-map-overview.png)
+## How it is built
 
-More detail: **[docs/DOWNLOAD.md](docs/DOWNLOAD.md)**
+```
+Sources/SetaMacApp    SwiftUI macOS app: map, mix dock, player, sheets
+Sources/SetaMacCore   Domain logic: library model, Camelot, scoring, drafts, Rekordbox import/export
+Sources/SetaMacChecks Smoke and validation checks for the core
+Scanner/              Python audio scanner bundled into every release (58 unit tests)
+scripts/              Build, sign, notarize, package and release
+```
 
-## Why this exists
-
-SetaMac is a personal project for exploring local-first music workflow tooling. It is built as a practical desktop tool, not a SaaS product.
-
-Technically, it combines a Swift macOS app, a bundled Python scanner, music-library analysis, Rekordbox export/import support, and a small release packaging and validation flow.
-
-## Usage notes
-
-- Bundled scanner analyzes folders you choose; SetaMac does not move or rename your files.
-- During a scan, SetaMac shows analyzed tracks as partial results; the completed `library.json` is written at the end.
-- Manual BPM/key/energy overrides stay in local app settings.
-- Removing a folder or track inside SetaMac does not delete audio files.
-
-## Technical overview
-
-- `Sources/SetaMacCore` contains domain logic, library models, scoring, drafts, scanner setup, and Rekordbox import/export support.
-- `Sources/SetaMacApp` contains the macOS UI.
-- `Sources/SetaMacChecks` contains smoke and validation checks for the app core.
-- `Scanner/` contains the production Python audio/library scanner bundled into app releases.
-- `scripts/verify-all.sh` is the main local verification command. It builds Swift targets, packages the app, checks the bundled scanner contents, and runs scanner unit tests.
-- Generated scanner state such as `Scanner/library.json`, `Scanner/cache.json`, `Scanner/scan-progress.json`, and `Scanner/scan.log` is ignored and is not bundled.
+- **Scoring** combines key compatibility (Camelot), BPM distance, intensity change and intro/outro fit into one mix score with a readable reason.
+- **The scanner** analyzes audio with librosa and writes a `library.json` the app reads. A per-file cache makes rescans fast.
+- **Releases** are built, packaged and checked by `scripts/verify-all.sh`; CI builds the Swift targets and runs the scanner tests on every push.
 
 ## Development
 
@@ -51,4 +59,12 @@ swift run SetaMacChecks
 ./scripts/verify-all.sh
 ```
 
-Release convention: bump `VERSION`, add a matching `CHANGELOG.md` section, commit those metadata updates, then run `./scripts/release-github.sh`.
+Release convention: bump `VERSION`, add a matching `CHANGELOG.md` section, commit, then run `./scripts/release-github.sh`.
+
+## Related
+
+[seta-web](https://github.com/manupastorr/seta-web) is the browser version I use for arranging a full set: mix curves over waveforms, transition checks, and export with cue points to Rekordbox.
+
+## License
+
+MIT. Made by [Manu Pastor](https://manupastor.de/dj/), a DJ who builds his own tools.
